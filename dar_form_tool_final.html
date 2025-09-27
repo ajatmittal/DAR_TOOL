@@ -1,0 +1,3058 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DAR Form → DOCX (Local)</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Arial; margin: 24px; }
+    h1 { margin: 0 0 12px; font-size: 28px; text-align: center; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+    .card { border: 1px solid #d1d5db; border-radius: 10px; padding: 16px; margin-bottom: 16px; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+    label { font-weight: 600; display: block; margin-bottom: 4px; }
+    input[type=text], select, textarea { width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; background: #fff; }
+    textarea { min-height: 70px; resize: vertical; }
+    input[type=file] { padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px; background: #fff; width: 100%; }
+    button { background: #2f80ed; color: white; border: 0; border-radius: 6px; padding: 10px 14px; font-weight: 600; cursor: pointer; box-shadow: 0 1px 1px rgba(0,0,0,0.06); }
+    button.secondary { background: #6b7280; }
+    button.danger { background: #dc2626; }
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
+    table { border-collapse: collapse; width: 100%; border: 1px solid #d1d5db; }
+    th, td { border: 1px solid #d1d5db; padding: 6px 8px; text-align: left; }
+    th { background: #f1f5f9; color: #111827; }
+    tbody tr:nth-child(even) { background: #fafafa; }
+    tbody tr:hover { background: #f3f4f6; }
+    .muted { color: #666; font-size: 12px; }
+    .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+    .log { white-space: pre-wrap; background: #fbfbfb; border: 1px dashed #e5e7eb; padding: 8px; border-radius: 6px; max-height: 240px; overflow: auto; }
+    .rev-bars { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 10px; margin-top: 6px; align-items: center; }
+    .rev-bars .bar-row { display: contents; }
+    .rev-bars .bar-lbl { font-size: 12px; color: #444; }
+    .rev-bars input[type=text] {
+      width: auto;
+      min-width: 80px;
+      padding: 6px;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+    }
+    /* Grey out non-editable cells */
+    input[readonly], textarea[readonly] { background: #f3f4f6; color: #6b7280; cursor: not-allowed; }
+    /* Make Gist of objection wider and taller in UI */
+    /* Summary of Audit table layout */
+    #paras { table-layout: auto; width: 100%; }
+    /* Adjust column widths for better readability on large screens */
+    #paras th:nth-child(2), #paras td:nth-child(2) { width: 50%; }
+    #paras th:nth-child(3), #paras td:nth-child(3) { width: 30%; }
+    #paras th:nth-child(4), #paras td:nth-child(4) { width: 10%; }
+    #paras th:nth-child(5), #paras td:nth-child(5) { width: 10%; }
+    #paras td:nth-child(2) textarea, .gist-textarea { min-height: 140px; }
+    .gist-editor { width: 100%; min-height: 140px; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px; background: #fff; overflow: auto; }
+    .gist-editor:empty:before { content: attr(data-placeholder); color: #9ca3af; }
+    .gist-editor table { border-collapse: collapse; width: 100%; }
+    .gist-editor th, .gist-editor td { border: 1px solid #d1d5db; padding: 4px 6px; }
+    .para-group-header td { background: #f8fafc; color: #334155; font-weight: 600; letter-spacing: 0.3px; }
+    .toggle-group { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #374151; }
+    .toggle-group input { accent-color: #2f80ed; }
+    .toggle-group.disabled { opacity: 0.5; }
+    .autosave-history { border: 1px dashed #d1d5db; background: #f8fafc; border-radius: 8px; padding: 10px; margin-top: 10px; }
+    .autosave-history .autosave-item { display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 6px 0; border-bottom: 1px solid #e5e7eb; }
+    .autosave-history .autosave-item:last-child { border-bottom: 0; }
+    .autosave-history time { font-weight: 600; color: #1f2937; }
+    .autosave-history small { color: #6b7280; display: block; }
+    .autosave-history button { padding: 4px 8px; font-size: 12px; }
+    .progress-overlay { position: fixed; inset: 0; background: rgba(255,255,255,0.75); backdrop-filter: blur(1.5px); display: flex; align-items: center; justify-content: center; z-index: 999; }
+    .progress-overlay .overlay-content { background: #ffffff; border-radius: 12px; padding: 24px 32px; box-shadow: 0 20px 40px rgba(15, 23, 42, 0.18); display: flex; flex-direction: column; align-items: center; gap: 12px; }
+    .progress-overlay .spinner { width: 36px; height: 36px; border-radius: 50%; border: 4px solid #dbeafe; border-top-color: #2563eb; animation: spin 0.8s linear infinite; }
+    .progress-overlay .overlay-message { font-weight: 600; color: #1f2937; }
+    .toast-container { position: fixed; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 10px; z-index: 1000; }
+    .toast { background: #111827; color: #ffffff; padding: 12px 16px; border-radius: 10px; box-shadow: 0 18px 40px rgba(15,23,42,0.25); display: flex; align-items: center; gap: 12px; opacity: 0; transform: translateY(12px); transition: opacity .25s ease, transform .25s ease; }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast.success { background: #047857; }
+    .toast.error { background: #b91c1c; }
+    .toast button { background: rgba(255,255,255,0.18); color: #fff; border: 0; border-radius: 6px; padding: 6px 10px; font-weight: 600; cursor: pointer; }
+    .toast button:hover { background: rgba(255,255,255,0.3); }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #paras td { vertical-align: top; }
+    #paras td:nth-child(3) { overflow-x: auto; }
+    .table-scroll { overflow-x: auto; }
+    /* Override default min-width for scrollable tables so that the Summary table adapts to available space */
+    .table-scroll table { min-width: 0; }
+    .rev-major { display: flex; flex-direction: column; gap: 12px; }
+    .rev-block { border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px; background: #f9fafb; }
+    .rev-block-title { font-weight: 600; margin-bottom: 6px; color: #1f2937; }
+    .rev-block-subtitle { font-size: 12px; color: #6b7280; margin: -4px 0 6px 0; }
+    .rev-matrix { width: 100%; border-collapse: collapse; }
+    .rev-matrix th, .rev-matrix td { border: 1px solid #d1d5db; padding: 6px 8px; text-align: center; }
+    .rev-matrix th { background: #f1f5f9; color: #1f2937; font-size: 13px; }
+    .rev-matrix input {
+      width: auto;
+      min-width: 80px;
+      padding: 4px 6px;
+      border: 1px solid #d1d5db;
+      border-radius: 4px;
+    }
+    .rev-dual { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; align-items: center; text-align: left; }
+    .rev-dual label { display: flex; flex-direction: column; font-size: 12px; color: #4b5563; gap: 4px; }
+    .rev-major-notes { width: 100%; min-height: 48px; border-radius: 6px; border: 1px solid #d1d5db; padding: 8px; resize: vertical; }
+    .locked-table input, .locked-table select { background: #f3f4f6; color: #4b5563; cursor: not-allowed; }
+    .rev-summary { display: flex; justify-content: space-between; align-items: center; background: #e5e7eb; color: #1f2937; padding: 6px 8px; border-radius: 6px; margin-bottom: 6px; font-size: 13px; }
+    .rev-summary label { font-weight: 600; }
+    .rev-summary input { width: 140px; border: 1px solid #cbd5f5; border-radius: 4px; padding: 4px 6px; background: #f9fafb; color: #1f2937; text-align: right; cursor: not-allowed; }
+    .sticky-nav { position: sticky; top: 0; z-index: 120; display: flex; gap: 12px; flex-wrap: wrap; background: #ffffff; padding: 10px 16px; margin: 12px 0; border: 1px solid #e5e7eb; border-radius: 10px; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06); }
+    .sticky-nav .nav-link { color: #2563eb; font-weight: 600; text-decoration: none; padding: 6px 12px; border-radius: 999px; transition: background 0.15s ease, color 0.15s ease; }
+    .sticky-nav .nav-link:hover { background: #eff6ff; }
+    .sticky-nav .nav-link:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
+    .totals-ribbon { position: sticky; top: 62px; z-index: 110; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px 16px; display: flex; gap: 16px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-bottom: 16px; box-shadow: 0 6px 16px rgba(15,23,42,0.05); }
+    .totals-ribbon .totals-item { display: flex; flex-direction: column; min-width: 140px; }
+    .totals-ribbon .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #475569; }
+    .totals-ribbon .value { font-size: 20px; font-weight: 600; color: #1f2937; }
+    @media (max-width: 720px) {
+      .sticky-nav { position: static; }
+      .totals-ribbon { position: static; }
+    }
+
+    .circle-group-row { display: flex; gap: 12px; flex-wrap: wrap; margin: 8px 0; }
+    .circle-field { display: flex; flex-direction: column; min-width: 150px; }
+    .circle-field select { padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; background: #fff; }
+    .sub-label { font-size: 12px; font-weight: 600; color: #4b5563; margin-bottom: 4px; }
+
+    .field-error { border-color: #b91c1c !important; box-shadow: 0 0 0 1px rgba(185, 28, 28, 0.08); background: #fef2f2 !important; }
+    .gist-editor.field-error { border-color: #b91c1c; background: #fff5f5; }
+
+    .para-header .summary-pill { margin-left: auto; display: inline-flex; gap: 6px; align-items: center; font-size: 12px; color: #1f2937; }
+    .summary-pill .pill { background: #e0f2fe; color: #0369a1; padding: 2px 10px; border-radius: 999px; font-weight: 600; }
+    .summary-pill .pill.warning { background: #fef3c7; color: #92400e; }
+    .summary-pill .pill.success { background: #dcfce7; color: #15803d; }
+    .para-drag-handle { cursor: grab; color: #6b7280; display: inline-flex; align-items: center; margin-right: 10px; }
+    .para-drag-handle:active { cursor: grabbing; }
+    .para-card.dragging { opacity: 0.6; border: 1px dashed #2563eb; }
+    /* Para cards styles */
+    .paras-cards { display: flex; flex-direction: column; gap: 12px; }
+    .para-card { border: 1px solid #d1d5db; border-radius: 10px; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,0.04); overflow: hidden; }
+    .para-card.expanded .para-content { display: block; }
+    .para-card.collapsed .para-content { display: none; }
+    .para-header { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; cursor: pointer; }
+    .para-header:hover { background: #f3f4f6; }
+    .para-sl-no { font-weight: 600; color: #1f2937; min-width: 50px; }
+    .para-gist-summary { flex: 1; font-size: 14px; color: #374151; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .para-tag { padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: 600; text-transform: uppercase; }
+    .para-tag.major { background: #fef3c7; color: #92400e; }
+    .para-tag.minor { background: #dbeafe; color: #1e40af; }
+    .para-toggle { margin-left: 8px; font-size: 18px; color: #6b7280; transition: transform 0.2s; }
+    .para-card.expanded .para-toggle { transform: rotate(180deg); }
+    .para-content { padding: 16px; display: none; }
+    .para-row { display: flex; gap: 16px; margin-bottom: 12px; }
+    .para-row:last-child { margin-bottom: 0; }
+    .para-field { flex: 1; }
+    .para-field label { font-weight: 600; display: block; margin-bottom: 4px; }
+    .para-actions { display: flex; gap: 8px; align-items: center; }
+    .para-actions button { padding: 6px 10px; font-size: 12px; }
+    /* Dashboard ribbon */
+    .dashboard-ribbon { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+    .dashboard-title { font-weight: 600; color: #1f2937; margin-bottom: 12px; }
+    .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+    .dashboard-item { background: #fff; border: 1px solid #d1d5db; border-radius: 6px; padding: 12px; }
+    .dashboard-item .label { font-size: 12px; color: #6b7280; margin-bottom: 4px; }
+    .dashboard-item .value { font-weight: 600; color: #1f2937; }
+    .dashboard-flags { margin-top: 12px; }
+    .dashboard-flags .flag { background: #fef2f2; color: #b91c1c; padding: 8px; border-radius: 6px; margin-bottom: 8px; font-size: 14px; }
+    .dashboard-flags .flag:last-child { margin-bottom: 0; }
+  </style>
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+</head>
+<body>
+  <h1>
+    DAR Generator for CGST Audit Thane
+    <div class="muted" style="font-size:14px">(Fill all fields to generate DAR)</div>
+  </h1>
+
+  <nav class="sticky-nav" aria-label="Section navigation">
+    <a class="nav-link" href="#section-part1">Part-I</a>
+    <a class="nav-link" href="#section-detection">Detection & Recovery</a>
+    <a class="nav-link" href="#section-summary">Summary</a>
+    <a class="nav-link" href="#section-risks">Risk Flags</a>
+    <a class="nav-link" href="#dashboard-ribbon">Dashboard</a>
+    <a class="nav-link" href="#section-session">Session Tools</a>
+  </nav>
+
+  <div id="totalsRibbon" class="totals-ribbon" role="status" aria-live="polite">
+    <div class="totals-item">
+      <span class="label">Detection Total</span>
+      <span class="value" id="ribbon-det-total">₹0</span>
+    </div>
+    <div class="totals-item">
+      <span class="label">Interest Total</span>
+      <span class="value" id="ribbon-det-interest">₹0</span>
+    </div>
+    <div class="totals-item">
+      <span class="label">Recovery Cash</span>
+      <span class="value" id="ribbon-rec-cash">₹0</span>
+    </div>
+    <div class="totals-item">
+      <span class="label">Recovery ITC</span>
+      <span class="value" id="ribbon-rec-itc">₹0</span>
+    </div>
+  </div>
+
+  <div class="card" id="section-intro">
+    <div class="grid">
+      <div>
+        <label>DAR Generator for CGST Audit Thane</label>
+        <div class="muted">(Fill all fields to generate DAR)</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="section-part1">
+    <h3>PART-I</h3>
+    <div class="grid">
+      <div><label>Name of Unit</label><input id="f_name" type="text" /></div>
+      <div><label>Registration No. (GST, ECC, STC)</label><input id="f_gstin" type="text" /></div>
+      <div><label>Commissionerate/Division/Range</label><input id="f_division" type="text" /></div>
+      <div><label>Category</label><input id="f_category" type="text" /></div>
+      <div><label>Type</label>
+        <select id="f_type">
+          <option value="Small">Small</option>
+          <option value="Medium">Medium</option>
+          <option value="Large">Large</option>
+        </select>
+      </div>
+      <div><label>Goods/Services supplied</label><input id="f_product" type="text" /></div>
+      <div><label>Tariff Item (Fill HSN/SAC here)</label><input id="f_tariff" type="text" /></div>
+      <div><label>Period Covered</label><input id="f_period" type="text" /></div>
+      <div>
+        <label>Date of Visit</label>
+        <div id="auditDates" class="date-multi">
+          <div class="row" style="gap:6px">
+            <input id="f_audit_date_input" type="date" />
+            <button class="secondary" id="addAuditDateBtn" type="button">Add Date</button>
+          </div>
+          <div id="auditDateError" class="muted" style="color:#B91C1C; display:none; margin-top:4px"></div>
+          <div id="auditDatesList" class="row" style="gap:6px; margin-top:6px"></div>
+          <input id="f_audit_dates" type="hidden" />
+        </div>
+      </div>
+      <div><label>A.R. No.</label><input id="f_ar" type="text" /></div>
+      <div><label>MCM Date</label><input id="f_mcm" type="date" /></div>
+      <!-- Rows 15 and 16 are captured in dedicated nested tables below -->
+    </div>
+    <div style="margin-top:12px">
+      <label>Address</label>
+      <textarea id="f_address"></textarea>
+    </div>
+    <div style="margin-top:12px">
+      <label for="f_officers">Circle, Group and Officers</label>
+      <div class="circle-group-row">
+        <div class="circle-field">
+          <label for="f_circle" class="sub-label">Circle</label>
+          <select id="f_circle">
+            <option value="">Select Circle</option>
+            <option value="I">I</option>
+            <option value="II">II</option>
+            <option value="III">III</option>
+            <option value="IV">IV</option>
+            <option value="V">V</option>
+            <option value="VI">VI</option>
+            <option value="VII">VII</option>
+            <option value="VIII">VIII</option>
+            <option value="IX">IX</option>
+            <option value="27 (HQ)">27 (HQ)</option>
+          </select>
+        </div>
+        <div class="circle-field">
+          <label for="f_group" class="sub-label">Group</label>
+          <select id="f_group">
+            <option value="">Select Group</option>
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+            <option value="6">6</option>
+            <option value="7">7</option>
+            <option value="8">8</option>
+            <option value="9">9</option>
+            <option value="10">10</option>
+            <option value="11">11</option>
+            <option value="12">12</option>
+            <option value="13">13</option>
+            <option value="14">14</option>
+            <option value="15">15</option>
+            <option value="16">16</option>
+            <option value="17">17</option>
+            <option value="18">18</option>
+            <option value="19">19</option>
+            <option value="20">20</option>
+            <option value="21">21</option>
+            <option value="22">22</option>
+            <option value="23">23</option>
+            <option value="24">24</option>
+            <option value="25">25</option>
+            <option value="26">26</option>
+            <option value="27 (HQ)">27 (HQ)</option>
+          </select>
+        </div>
+      </div>
+      <textarea id="f_officers" placeholder="List officers / team members"></textarea>
+    </div>
+  </div>
+
+  <div class="card" id="section-detection">
+    <h3>Part-1 Detection and Recovery</h3>
+    <div class="muted" style="margin-bottom:8px">Exact match of nested tables inside Table 1 rows 15 and 16 in Target.docx</div>
+    <div class="grid" style="grid-template-columns: 1fr 1fr; gap:16px">
+      <div>
+        <label>Total Revenue Detection (Rs.)</label>
+        <table class="locked-table">
+          <thead>
+            <tr><th>Description</th><th>Amount (Rs.)</th></tr>
+          </thead>
+          <tbody id="rev_tbl">
+            <tr><td>GST</td><td><input type="text" id="rev_gst_amt" inputmode="decimal" pattern="([Nn][Qq])|[0-9.,]*" title="Auto-filled" readonly tabindex="-1"></td></tr>
+            <tr><td>Interest</td><td><input type="text" id="rev_int_amt" inputmode="decimal" pattern="([Nn][Qq])|[0-9.,]*" title="Auto-filled" readonly tabindex="-1"></td></tr>
+            <tr><td>Penalty</td><td><input type="text" id="rev_pen_amt" inputmode="decimal" pattern="([Nn][Qq])|[0-9.,]*" title="Auto-filled" readonly tabindex="-1"></td></tr>
+            <tr><td>Late Fee</td><td><input type="text" id="rev_late_amt" inputmode="decimal" pattern="([Nn][Qq])|[0-9.,]*" title="Auto-filled" readonly tabindex="-1"></td></tr>
+            <tr><td><b>Total</b></td><td><input type="text" id="rev_sum_amt" readonly tabindex="-1"></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div>
+        <label>Total Recoveries</label>
+        <table class="locked-table">
+          <thead>
+            <tr><th>Description</th><th>Cash</th><th>ITC</th><th>Total</th></tr>
+          </thead>
+          <tbody id="vol_tbl">
+            <tr><td>GST</td><td><input type="text" id="vol_gst_cash" inputmode="decimal" pattern="([Nn][Qq])|[0-9.,]*" title="Auto-filled" readonly tabindex="-1"></td><td><input type="text" id="vol_gst_itc" inputmode="decimal" pattern="([Nn][Qq])|[0-9.,]*" title="Auto-filled" readonly tabindex="-1"></td><td><input type="text" id="vol_gst_total" readonly tabindex="-1"></td></tr>
+            <tr><td>Interest</td><td><input type="text" id="vol_int_cash" inputmode="decimal" pattern="([Nn][Qq])|[0-9.,]*" title="Auto-filled" readonly tabindex="-1"></td><td><input type="text" id="vol_int_itc" readonly tabindex="-1"></td><td><input type="text" id="vol_int_total" readonly tabindex="-1"></td></tr>
+            <tr><td>Penalty</td><td><input type="text" id="vol_pen_cash" inputmode="decimal" pattern="([Nn][Qq])|[0-9.,]*" title="Auto-filled" readonly tabindex="-1"></td><td><input type="text" id="vol_pen_itc" readonly tabindex="-1"></td><td><input type="text" id="vol_pen_total" readonly tabindex="-1"></td></tr>
+            <tr><td>Late Fee</td><td><input type="text" id="vol_late_cash" inputmode="decimal" pattern="([Nn][Qq])|[0-9.,]*" title="Auto-filled" readonly tabindex="-1"></td><td><input type="text" id="vol_late_itc" readonly tabindex="-1"></td><td><input type="text" id="vol_late_total" readonly tabindex="-1"></td></tr>
+            <tr><td><b>Total</b></td><td><input type="text" id="vol_sum_cash" readonly tabindex="-1"></td><td><input type="text" id="vol_sum_itc" readonly tabindex="-1"></td><td><input type="text" id="vol_sum_total" readonly tabindex="-1"></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="muted" style="margin-top:8px">Totals auto-calculate if you enter Cash/ITC. You may override computed totals if needed.</div>
+  </div>
+
+  <div class="card" id="section-summary">
+    <div class="row" style="justify-content: space-between;">
+      <h3 style="margin:0">SUMMARY OF AUDIT RESULTS</h3>
+    </div>
+    <div class="muted" style="margin-bottom:8px">Columns: Sl.No., Gist of objection, Revenue implication (if any), Assessee/Taxable Person agreement (Yes/No + reasons if No), Auditors Comments, conclusion and Proposal</div>
+    <div class="row" style="justify-content: space-between; align-items:center; margin-bottom:8px; gap:12px;">
+      <div class="row" style="gap:14px; flex-wrap: wrap;">
+        <label class="toggle-group"><input type="checkbox" id="toggleMajor" checked /> Major Paras</label>
+        <label class="toggle-group"><input type="checkbox" id="toggleMinor" checked /> Minor Paras</label>
+      </div>
+      <div class="muted" id="paraCounts" style="font-size:12px"></div>
+    </div>
+    <div id="paras-container" class="paras-cards"></div>
+    <div class="row" style="justify-content:flex-end; margin-top:10px; gap:8px;">
+      <button class="secondary" id="addRow">Add Para</button>
+      <button class="secondary" id="addMinorRow">Add Minor Para</button>
+      <button class="danger" id="clearRows">Clear All</button>
+    </div>
+  </div>
+
+  <div class="card" id="section-risks">
+    <div class="row" style="justify-content: space-between;">
+      <h3 style="margin:0">Risk Flags (Template Table 3)</h3>
+    </div>
+    <div class="muted" style="margin-bottom:8px">Columns: Sl. No., Risk Parameter, Description, Verification, Action</div>
+    <table id="risks">
+      <thead>
+        <tr>
+          <th style="width:60px">Sl. No.</th>
+          <th>Risk Parameter</th>
+          <th>Description</th>
+          <th>Verification</th>
+          <th style="width:80px">Action</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    <div class="row" style="justify-content:flex-end; margin-top:10px; gap:8px;">
+      <button class="secondary" id="addRisk">Add Row</button>
+      <button class="danger" id="clearRisk">Clear All</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin:0 0 8px 0">DAR/FAR issuing authority</h3>
+    <div class="muted" style="margin-bottom:8px">This information prints at the bottom right of the report.</div>
+    <table>
+      <tbody>
+        <tr>
+          <th style="width:240px">Name</th>
+          <td><input id="f_iss_name" type="text" placeholder="e.g., A. B. Sharma" /></td>
+        </tr>
+        <tr>
+          <th>Designation</th>
+          <td>
+            <select id="f_iss_desig">
+              <option value="">Select</option>
+              <option value="Assistant Commissioner">Assistant Commissioner</option>
+              <option value="Deputy Commissioner">Deputy Commissioner</option>
+            </select>
+          </td>
+        </tr>
+        <tr>
+          <th>Circle</th>
+          <td>
+            <select id="f_iss_circle">
+              <option value="">Select</option>
+              <option value="I">I</option>
+              <option value="II">II</option>
+              <option value="III">III</option>
+              <option value="IV">IV</option>
+              <option value="V">V</option>
+              <option value="VI">VI</option>
+              <option value="VII">VII</option>
+              <option value="VIII">VIII</option>
+              <option value="IX">IX</option>
+            </select>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div id="dashboard-ribbon" class="dashboard-ribbon" style="display:none">
+    <div class="dashboard-title">Audit Summary Dashboard</div>
+    <div class="dashboard-grid">
+      <div class="dashboard-item">
+        <div class="label">Total Paras</div>
+        <div class="value" id="dash-total-paras">0</div>
+      </div>
+      <div class="dashboard-item">
+        <div class="label">CGST Detection</div>
+        <div class="value" id="dash-cgst-det">₹0</div>
+      </div>
+      <div class="dashboard-item">
+        <div class="label">SGST Detection</div>
+        <div class="value" id="dash-sgst-det">₹0</div>
+      </div>
+      <div class="dashboard-item">
+        <div class="label">IGST Detection</div>
+        <div class="value" id="dash-igst-det">₹0</div>
+      </div>
+      <div class="dashboard-item">
+        <div class="label">CGST Recovery</div>
+        <div class="value" id="dash-cgst-rec">₹0</div>
+      </div>
+      <div class="dashboard-item">
+        <div class="label">SGST Recovery</div>
+        <div class="value" id="dash-sgst-rec">₹0</div>
+      </div>
+      <div class="dashboard-item">
+        <div class="label">IGST Recovery</div>
+        <div class="value" id="dash-igst-rec">₹0</div>
+      </div>
+    </div>
+    <div class="dashboard-flags" id="dashboard-flags"></div>
+  </div>
+
+  <div class="card">
+    <div class="row" style="gap:8px; flex-wrap:wrap; align-items:center">
+      <button id="generate" disabled>Generate DAR</button>
+      <button id="downloadLast" class="secondary" type="button" disabled>Download Last Output</button>
+      <span id="status" class="muted"></span>
+    </div>
+    <div id="log" class="log" style="margin-top:12px"></div>
+  </div>
+  
+  <div class="card" id="section-session">
+    <div class="row" style="gap:8px; align-items:center">
+      <button id="saveSession" class="secondary" type="button">Save Session</button>
+      <button id="loadSessionBtn" class="secondary" type="button">Load Session</button>
+      <input id="loadSessionFile" type="file" accept="application/json,.json" style="display:none" />
+      <span class="muted">Save your progress to a JSON file or restore it later.</span>
+    </div>
+    <div class="row" style="gap:8px; align-items:center; margin-top:10px; flex-wrap:wrap;">
+      <button id="restoreAutosave" class="secondary" type="button">Restore Last Autosave</button>
+      <button id="toggleAutosaveHistory" class="secondary" type="button">Show Autosave History</button>
+      <span id="autosaveInfo" class="muted"></span>
+    </div>
+    <div id="autosaveHistoryPanel" class="autosave-history" style="display:none"></div>
+  </div>
+
+  <div id="progressOverlay" class="progress-overlay" style="display:none">
+    <div class="overlay-content">
+      <div class="spinner"></div>
+      <div id="overlayMessage" class="overlay-message">Working…</div>
+    </div>
+  </div>
+  <div id="toastContainer" class="toast-container"></div>
+
+  <script>
+    const WNS = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+    const $ = id => document.getElementById(id);
+    const log = (...a) => { const s=a.join(' '); console.log(s); $('log').textContent += s+'\n'; };
+    const setStatus = s => $('status').textContent = s;
+
+    const genBtn = $('generate');
+    const downloadLastBtn = $('downloadLast');
+    // Preloaded template, enable immediately
+    genBtn.disabled = false;
+    if(downloadLastBtn) downloadLastBtn.disabled = true;
+    // Attach numeric/NQ restrictions and auto-calc listeners immediately
+    try{ wireNestedAutoCalc(); recalcRevenue(); recalcVoluntary(); wireAuditDates(); wireParaGroupToggles(); applyGroupVisibility(); updatePart1TotalsFromParas(); }catch(e){}
+
+    document.querySelectorAll('.sticky-nav .nav-link').forEach(link => {
+      link.addEventListener('click', evt => {
+        const targetId = link.getAttribute('href');
+        if(targetId && targetId.startsWith('#')){
+          const targetEl = document.querySelector(targetId);
+          if(targetEl){
+            evt.preventDefault();
+            targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        }
+      });
+    });
+
+    // Date helpers (dd-mm-yyyy)
+    const auditDates = [];
+    let draggedCard = null;
+    let showMajorParas = true;
+    let showMinorParas = true;
+    const highlightedNodes = new Set();
+    function clearFieldHighlights(){
+      highlightedNodes.forEach(node => { if(node?.classList){ node.classList.remove('field-error'); } });
+      highlightedNodes.clear();
+    }
+    function applyFieldHighlights(nodes){
+      clearFieldHighlights();
+      if(!nodes || !nodes.length) return;
+      nodes.forEach(node => {
+        if(node && node.classList){
+          node.classList.add('field-error');
+          highlightedNodes.add(node);
+        }
+      });
+    }
+
+    const AUTOSAVE_KEY = 'dar_form_autosaves_v1';
+    const AUTOSAVE_LIMIT = 10;
+    let autosaves = [];
+    let autosaveTimer = null;
+    let lastAutosaveSnapshot = '';
+    let autosaveHistoryVisible = false;
+    let lastGeneratedBlob = null;
+    let lastGeneratedName = 'Target-Filled.docx';
+    let partTotalsTimer = null;
+    function isValidDDMMYYYY(s){
+      if(!/^\d{2}-\d{2}-\d{4}$/.test(s)) return false;
+      const [dd,mm,yyyy] = s.split('-').map(x=>parseInt(x,10));
+      if(mm<1||mm>12||dd<1||dd>31) return false;
+      const daysInMonth = [31, (yyyy%4===0 && (yyyy%100!==0 || yyyy%400===0))?29:28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+      return dd <= daysInMonth[mm-1];
+    }
+    function isoToDDMMYYYY(iso){
+      if(!iso) return '';
+      const parts = iso.split('-');
+      if(parts.length !== 3) return '';
+      const [yyyy, mm, dd] = parts;
+      if(!yyyy || !mm || !dd) return '';
+      return `${dd.padStart(2,'0')}-${mm.padStart(2,'0')}-${yyyy}`;
+    }
+    function ddmmToISO(ddmm){
+      if(!ddmm) return '';
+      if(!isValidDDMMYYYY(ddmm)) return '';
+      const [dd, mm, yyyy] = ddmm.split('-');
+      return `${yyyy}-${mm}-${dd}`;
+    }
+    function isISODate(s){ return /^\d{4}-\d{2}-\d{2}$/.test(s||''); }
+    function coerceToISODate(val){
+      if(!val) return '';
+      if(isISODate(val)) return val;
+      return ddmmToISO(val) || '';
+    }
+    function formatTimestamp(ts){
+      try{
+        const d = new Date(ts);
+        if(!isFinite(d.getTime())) return ts;
+        return d.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+      }catch(e){ return ts; }
+    }
+    function formatRelative(ts){
+      try{
+        const d = new Date(ts);
+        if(!isFinite(d.getTime())) return '';
+        let diff = Date.now() - d.getTime();
+        const past = diff >= 0;
+        diff = Math.abs(diff);
+        if(diff < 60000) return past ? 'just now' : 'in under 1 min';
+        let value, unit;
+        if(diff < 3600000){ value = Math.round(diff/60000); unit = 'minute'; }
+        else if(diff < 86400000){ value = Math.round(diff/3600000); unit = 'hour'; }
+        else { value = Math.round(diff/86400000); unit = 'day'; }
+        if(value !== 1) unit += 's';
+        return past ? `${value} ${unit} ago` : `in ${value} ${unit}`;
+      }catch(e){ return ''; }
+    }
+    function showOverlay(message){
+      const overlay = $('progressOverlay');
+      const label = $('overlayMessage');
+      if(label && message) label.textContent = message;
+      if(overlay) overlay.style.display = 'flex';
+    }
+    function hideOverlay(){
+      const overlay = $('progressOverlay');
+      if(overlay) overlay.style.display = 'none';
+    }
+    function showToast(type, message, opts={}){
+      const container = $('toastContainer');
+      if(!container) return;
+      const toast = document.createElement('div');
+      toast.className = `toast ${type||''}`.trim();
+      const text = document.createElement('div');
+      text.textContent = message;
+      toast.appendChild(text);
+      const dismiss = ()=>{
+        toast.classList.remove('show');
+        setTimeout(()=>{ if(toast.parentNode) toast.parentNode.removeChild(toast); }, 300);
+      };
+      if(opts && opts.actionLabel && typeof opts.onAction === 'function'){
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.textContent = opts.actionLabel;
+        btn.addEventListener('click', ()=>{ opts.onAction(); dismiss(); });
+        toast.appendChild(btn);
+      }
+      container.appendChild(toast);
+      requestAnimationFrame(()=> toast.classList.add('show'));
+      const duration = typeof opts.duration === 'number' ? opts.duration : 5000;
+      if(duration > 0){ setTimeout(dismiss, duration); }
+    }
+    function downloadLastOutput(){
+      if(!lastGeneratedBlob){
+        showToast('error', 'No generated file available yet.');
+        return;
+      }
+      saveAs(lastGeneratedBlob, lastGeneratedName || 'Target-Filled.docx');
+      setStatus('Re-downloading last output…');
+      showToast('success', 'Downloading last output…', { duration: 3000 });
+    }
+    function formatIndianNumberString(str, decimalsHint){
+      if(str==null) return '';
+      const trimmed = String(str).trim();
+      if(!trimmed) return '';
+      if(/^[Nn][Qq]$/.test(trimmed)) return 'NQ';
+      const numeric = parseFloat(trimmed.replace(/,/g,''));
+      if(!Number.isFinite(numeric)) return trimmed;
+      let decimals = decimalsHint;
+      if(decimals==null){
+        const parts = trimmed.replace(/,/g,'').split('.');
+        decimals = parts[1] ? parts[1].length : 0;
+      }
+      const opts = decimals>0 ? { minimumFractionDigits:decimals, maximumFractionDigits:decimals } : { minimumFractionDigits:0, maximumFractionDigits:0 };
+      return numeric.toLocaleString('en-IN', opts);
+    }
+    function formatCurrencyValue(val){
+      if(val == null || val === '') return '₹0';
+      const numVal = typeof val === 'number' ? val : parseFloat(String(val).replace(/,/g,''));
+      if(!Number.isFinite(numVal)) return '₹0';
+      return '₹' + formatIndianNumberString(String(numVal));
+    }
+
+    function formatIndianInput(el){
+      if(!el) return;
+      const val = el.value;
+      const formatted = formatIndianNumberString(val);
+      el.value = formatted;
+    }
+    function formatIndianInputs(ids){
+      ids.forEach(id=>{ const el = $(id); if(el) formatIndianInput(el); });
+    }
+    function renderAuditDates(){
+      const list = $('auditDatesList');
+      list.innerHTML = '';
+      for(const d of auditDates){
+        const chip = document.createElement('span');
+        chip.style.border = '1px solid #d1d5db';
+        chip.style.borderRadius = '12px';
+        chip.style.padding = '2px 8px';
+        chip.style.background = '#f9fafb';
+        chip.style.display = 'inline-flex';
+        chip.style.alignItems = 'center';
+        chip.style.gap = '6px';
+        chip.textContent = d;
+        const x = document.createElement('button');
+        x.type='button'; x.textContent = '×'; x.className='danger'; x.style.padding='2px 6px'; x.style.lineHeight='1';
+        x.onclick = ()=>{ const i=auditDates.indexOf(d); if(i>=0){ auditDates.splice(i,1); renderAuditDates(); }};
+        chip.appendChild(x);
+        list.appendChild(chip);
+      }
+      $('f_audit_dates').value = auditDates.join(', ');
+      const err = $('auditDateError');
+      if(err){ err.textContent = ''; err.style.display = 'none'; }
+    }
+    function wireAuditDates(){
+      const addBtn = $('addAuditDateBtn');
+      const input = $('f_audit_date_input');
+      if(addBtn && input){
+        addBtn.onclick = ()=>{
+          const raw = (input.value||'').trim();
+          if(!raw) return;
+          const err = $('auditDateError');
+          const formatted = isoToDDMMYYYY(raw);
+          if(!formatted || !isValidDDMMYYYY(formatted)){
+            if(err){ err.textContent = 'Invalid date. Use dd-mm-yyyy (e.g., 05-09-2025).'; err.style.display = 'block'; }
+            return;
+          }
+          if(auditDates.includes(formatted)){
+            if(err){ err.textContent = 'This date is already added.'; err.style.display = 'block'; }
+            return;
+          }
+          if(err){ err.textContent = ''; err.style.display = 'none'; }
+          auditDates.push(formatted);
+          input.value = '';
+          renderAuditDates();
+        };
+        input.addEventListener('keydown', (e)=>{
+          if(e.key==='Enter'){ e.preventDefault(); addBtn.click(); }
+        });
+        const clearError = ()=>{
+          const err = $('auditDateError');
+          if(err){ err.textContent=''; err.style.display='none'; }
+        };
+        input.addEventListener('input', clearError);
+        input.addEventListener('change', clearError);
+      }
+    }
+    function wireParaGroupToggles(){
+      const tMajor = $('toggleMajor');
+      if(tMajor){
+        showMajorParas = !!tMajor.checked;
+        tMajor.addEventListener('change', ()=>{ showMajorParas = !!tMajor.checked; applyGroupVisibility(); });
+      }
+      const tMinor = $('toggleMinor');
+      if(tMinor){
+        showMinorParas = !!tMinor.checked;
+        tMinor.addEventListener('change', ()=>{ showMinorParas = !!tMinor.checked; applyGroupVisibility(); });
+      }
+    }
+
+    // Objection rows UI
+    const parasContainer = document.querySelector('#paras-container');
+
+    if(parasContainer){
+      parasContainer.addEventListener('dragover', e => {
+        if(!draggedCard) return;
+        const target = e.target.closest('.para-card');
+        if(target === draggedCard) return;
+        if(target && target.dataset && target.dataset.minor === draggedCard.dataset.minor){
+          e.preventDefault();
+        }else if(!target){
+          e.preventDefault();
+        }
+      });
+      parasContainer.addEventListener('drop', e => {
+        if(!draggedCard) return;
+        e.preventDefault();
+        const target = e.target.closest('.para-card');
+        if(target && target !== draggedCard && target.dataset && target.dataset.minor === draggedCard.dataset.minor){
+          const rect = target.getBoundingClientRect();
+          const before = e.clientY < rect.top + rect.height / 2;
+          parasContainer.insertBefore(draggedCard, before ? target : target.nextSibling);
+        }else{
+          const groupKey = draggedCard.dataset.minor;
+          const siblings = Array.from(parasContainer.children).filter(node => node.classList && node.classList.contains('para-card') && node.dataset.minor === groupKey && node !== draggedCard);
+          const lastSibling = siblings[siblings.length - 1];
+          if(lastSibling){
+            parasContainer.insertBefore(draggedCard, lastSibling.nextSibling);
+          }else{
+            parasContainer.appendChild(draggedCard);
+          }
+        }
+        renumberParas();
+      });
+    }
+
+    function getGistSummary(gist){
+      if(!gist) return 'No gist entered';
+      const text = gist.replace(/<[^>]*>/g, '').trim();
+      return text.length > 50 ? text.substring(0, 50) + '...' : text || 'No gist entered';
+    }
+
+    function createMinorRevenueDiv(objRev=''){
+      const div = document.createElement('div');
+      const notes = document.createElement('textarea'); notes.className='rev-notes'; notes.placeholder='Revenue implication notes'; notes.style.minHeight='42px'; notes.value = (typeof objRev==='string'? objRev : (objRev?.notes||''));
+      const wrap = document.createElement('div'); wrap.className='rev-bars';
+      function mk(label, cls, val=''){
+        const row = document.createElement('div'); row.className='bar-row';
+        const lab = document.createElement('label'); lab.textContent=label; lab.className='bar-lbl';
+        const input = document.createElement('input'); input.type='text'; input.className=cls; input.placeholder='0'; input.title='Enter amount or NQ'; input.value=val||'';
+        input.addEventListener('input', coerceNumOrNQInput);
+        input.addEventListener('blur', ()=>{ formatIndianInput(input); schedulePartTotalsUpdate(); });
+        formatIndianInput(input);
+        row.appendChild(lab); row.appendChild(input); return row;
+      }
+      wrap.appendChild(mk('Tax (Rs.)','rev-tax', objRev?.tax));
+      wrap.appendChild(mk('Interest (Rs.)','rev-int', objRev?.interest));
+      wrap.appendChild(mk('Penalty (Rs.)','rev-pen', objRev?.penalty));
+      wrap.appendChild(mk('Late Fee (Rs.)','rev-late', objRev?.latefee));
+      wrap.appendChild(mk('Paid by taxpayer (Rs.)','rev-paid', objRev?.paid));
+      div.appendChild(notes); div.appendChild(wrap); return div;
+    }
+
+    function createMajorRevenueDiv(rawData){
+      const data = normalizeMajorRevenueData(rawData);
+      const div = document.createElement('div');
+      div.className = 'rev-major-cell';
+      div.dataset.revCell = 'major';
+      const container = document.createElement('div');
+      container.className = 'rev-major';
+
+      function makeAmountInput(role, cat, tax, kind, value){
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.dataset.role = role;
+        input.dataset.category = cat;
+        input.dataset.tax = tax;
+        if(kind) input.dataset.kind = kind;
+        input.placeholder = '0';
+        const titleParts = [];
+        titleParts.push(cat.charAt(0).toUpperCase() + cat.slice(1));
+        titleParts.push(tax.toUpperCase());
+        if(kind){ titleParts.push(kind.toUpperCase()); }
+        input.title = `Enter ${titleParts.join(' ')} (numbers or NQ)`;
+        input.value = value || '';
+        input.addEventListener('input', (e)=>{ coerceNumOrNQInput(e); });
+        input.addEventListener('blur', ()=>{ formatIndianInput(input); updateMajorCellSummaries(div); schedulePartTotalsUpdate(); });
+        formatIndianInput(input);
+        return input;
+      }
+
+      let detectionSummaryInput = null;
+      let recoverySummaryInput = null;
+
+      function buildDetectionTable(){
+        const block = document.createElement('div');
+        block.className = 'rev-block';
+        const title = document.createElement('div'); title.className = 'rev-block-title'; title.textContent = 'Detection';
+        block.appendChild(title);
+        const subtitle = document.createElement('div'); subtitle.className = 'rev-block-subtitle'; subtitle.textContent = 'Total Detection';
+        block.appendChild(subtitle);
+        const summary = document.createElement('div'); summary.className = 'rev-summary';
+        const lab = document.createElement('label'); lab.textContent = 'Total (Rs.)'; summary.appendChild(lab);
+        detectionSummaryInput = document.createElement('input'); detectionSummaryInput.type = 'text'; detectionSummaryInput.readOnly = true; detectionSummaryInput.tabIndex = -1; detectionSummaryInput.dataset.summary = 'det'; detectionSummaryInput.title = 'Auto-calculated total detection for this para'; summary.appendChild(detectionSummaryInput);
+        block.appendChild(summary);
+        const table = document.createElement('table'); table.className = 'rev-matrix';
+        const thead = document.createElement('thead');
+        const tr1 = document.createElement('tr');
+        const thBlank = document.createElement('th'); thBlank.textContent = 'Component'; thBlank.rowSpan = 2; tr1.appendChild(thBlank);
+        const thAmounts = document.createElement('th'); thAmounts.colSpan = 3; thAmounts.textContent = 'Amount (Rs.)'; tr1.appendChild(thAmounts);
+        thead.appendChild(tr1);
+        const tr2 = document.createElement('tr');
+        ['CGST','SGST','IGST'].forEach(lbl=>{ const th=document.createElement('th'); th.textContent = lbl; tr2.appendChild(th); });
+        thead.appendChild(tr2);
+        table.appendChild(thead);
+        const tbody = document.createElement('tbody');
+        const rows = [
+          { key:'tax', label:'Tax', values:data.detection.tax },
+          { key:'interest', label:'Interest', values:data.detection.interest },
+          { key:'penalty', label:'Penalty', values:data.detection.penalty },
+          { key:'late', label:'Late Fee', values:data.detection.late },
+        ];
+        rows.forEach(row => {
+          const r = document.createElement('tr');
+          const labelCell = document.createElement('th'); labelCell.textContent = row.label; r.appendChild(labelCell);
+          ['cgst','sgst','igst'].forEach(tax=>{
+            const cell = document.createElement('td');
+            cell.appendChild(makeAmountInput('det', row.key, tax, 'amount', row.values?.[tax]));
+            r.appendChild(cell);
+          });
+          tbody.appendChild(r);
+        });
+        table.appendChild(tbody);
+        block.appendChild(table);
+        return block;
+      }
+
+      function buildRecoveryTable(){
+        const block = document.createElement('div');
+        block.className = 'rev-block';
+        const title = document.createElement('div'); title.className = 'rev-block-title'; title.textContent = 'Recovery';
+        block.appendChild(title);
+        const subtitle = document.createElement('div'); subtitle.className = 'rev-block-subtitle'; subtitle.textContent = 'Total Recovery';
+        block.appendChild(subtitle);
+        const summary = document.createElement('div'); summary.className = 'rev-summary';
+        const lab = document.createElement('label'); lab.textContent = 'Total (Rs.)'; summary.appendChild(lab);
+        recoverySummaryInput = document.createElement('input'); recoverySummaryInput.type = 'text'; recoverySummaryInput.readOnly = true; recoverySummaryInput.tabIndex = -1; recoverySummaryInput.dataset.summary = 'rec'; recoverySummaryInput.title = 'Auto-calculated total recovery for this para'; summary.appendChild(recoverySummaryInput);
+        block.appendChild(summary);
+        const table = document.createElement('table'); table.className = 'rev-matrix rev-matrix-recovery';
+        const thead = document.createElement('thead');
+        const tr1 = document.createElement('tr');
+        const thBlank = document.createElement('th'); thBlank.textContent = 'Component'; thBlank.rowSpan = 2; tr1.appendChild(thBlank);
+        const thCGST = document.createElement('th'); thCGST.colSpan = 1; thCGST.textContent = 'CGST'; tr1.appendChild(thCGST);
+        const thSGST = document.createElement('th'); thSGST.colSpan = 1; thSGST.textContent = 'SGST'; tr1.appendChild(thSGST);
+        const thIGST = document.createElement('th'); thIGST.colSpan = 1; thIGST.textContent = 'IGST'; tr1.appendChild(thIGST);
+        thead.appendChild(tr1);
+        const tr2 = document.createElement('tr');
+        ['CGST','SGST','IGST'].forEach(()=>{
+          const th = document.createElement('th'); th.textContent = 'Amount (Rs.)'; tr2.appendChild(th);
+        });
+        thead.appendChild(tr2);
+        table.appendChild(thead);
+        const tbody = document.createElement('tbody');
+
+        const taxRow = document.createElement('tr');
+        const taxLabel = document.createElement('th'); taxLabel.textContent = 'Tax'; taxRow.appendChild(taxLabel);
+        ['cgst','sgst','igst'].forEach(tax=>{
+          const cell = document.createElement('td');
+          const dual = document.createElement('div'); dual.className = 'rev-dual';
+          const itcWrap = document.createElement('label'); itcWrap.textContent = 'ITC';
+          const itcInput = makeAmountInput('rec', 'tax', tax, 'itc', data.recovery.tax?.[tax]?.itc);
+          itcWrap.appendChild(itcInput);
+          const cashWrap = document.createElement('label'); cashWrap.textContent = 'Cash';
+          const cashInput = makeAmountInput('rec', 'tax', tax, 'cash', data.recovery.tax?.[tax]?.cash);
+          cashWrap.appendChild(cashInput);
+          dual.appendChild(itcWrap);
+          dual.appendChild(cashWrap);
+          cell.appendChild(dual);
+          taxRow.appendChild(cell);
+        });
+        tbody.appendChild(taxRow);
+
+        [{ key:'interest', label:'Interest' }, { key:'penalty', label:'Penalty' }, { key:'late', label:'Late Fee' }].forEach(row=>{
+          const r = document.createElement('tr');
+          const labelCell = document.createElement('th'); labelCell.textContent = row.label; r.appendChild(labelCell);
+          ['cgst','sgst','igst'].forEach(tax=>{
+            const cell = document.createElement('td');
+            cell.appendChild(makeAmountInput('rec', row.key, tax, 'amount', data.recovery[row.key]?.[tax]));
+            r.appendChild(cell);
+          });
+          tbody.appendChild(r);
+        });
+
+        table.appendChild(tbody);
+        block.appendChild(table);
+        return block;
+      }
+
+      container.appendChild(buildDetectionTable());
+      container.appendChild(buildRecoveryTable());
+
+      const notes = document.createElement('textarea');
+      notes.className = 'rev-major-notes';
+      notes.placeholder = 'Notes / explanation (optional)';
+      notes.value = data.notes || '';
+      notes.addEventListener('input', ()=> schedulePartTotalsUpdate());
+      container.appendChild(notes);
+
+      div.appendChild(container);
+      updateMajorCellSummaries(div);
+      return div;
+    }
+
+    function prevCardSameGroup(card){
+      let node = card.previousElementSibling;
+      const groupKey = card.dataset.minor === '1' ? '1' : '0';
+      while(node){
+        const nodeKey = node.dataset.minor === '1' ? '1' : '0';
+        if(nodeKey !== groupKey) return null;
+        return node;
+      }
+      return null;
+    }
+
+    function nextCardSameGroup(card){
+      let node = card.nextElementSibling;
+      const groupKey = card.dataset.minor === '1' ? '1' : '0';
+      while(node){
+        const nodeKey = node.dataset.minor === '1' ? '1' : '0';
+        if(nodeKey !== groupKey) return null;
+        return node;
+      }
+      return null;
+    }
+
+    function addRow(obj={}, opts={}){
+      const isMinor = !!opts.minor;
+      const card = document.createElement('div');
+      card.className = 'para-card collapsed';
+      card.dataset.revMode = isMinor ? 'minor' : 'major';
+      card.dataset.minor = isMinor ? '1' : '0';
+      if(isMinor){ card.classList.add('minor-card'); }
+
+      const header = document.createElement('div');
+      header.className = 'para-header';
+      header.onclick = () => {
+        card.classList.toggle('expanded');
+        card.classList.toggle('collapsed');
+      };
+
+      const dragHandle = document.createElement('span');
+      dragHandle.className = 'para-drag-handle';
+      dragHandle.title = 'Drag to reorder';
+      dragHandle.textContent = '::';
+      dragHandle.addEventListener('click', evt => evt.stopPropagation());
+      const enableDrag = evt => { card.dataset.dragReady = '1'; if(evt?.preventDefault) evt.preventDefault(); evt.stopPropagation(); };
+      const disableDrag = () => { delete card.dataset.dragReady; };
+      dragHandle.addEventListener('mousedown', enableDrag);
+      dragHandle.addEventListener('touchstart', enableDrag, { passive: false });
+      ['mouseup','mouseleave','touchend','touchcancel'].forEach(ev => dragHandle.addEventListener(ev, disableDrag));
+      header.appendChild(dragHandle);
+
+      card.draggable = true;
+      card.addEventListener('dragstart', e => {
+        if(card.dataset.dragReady !== '1'){
+          e.preventDefault();
+          return;
+        }
+        delete card.dataset.dragReady;
+        draggedCard = card;
+        card.classList.add('dragging');
+        if(e.dataTransfer){
+          e.dataTransfer.effectAllowed = 'move';
+          try{ e.dataTransfer.setData('text/plain',''); }catch(_){ /* ignore */ }
+        }
+      });
+      card.addEventListener('dragend', () => {
+        draggedCard = null;
+        card.classList.remove('dragging');
+        delete card.dataset.dragReady;
+      });
+
+      const slNo = document.createElement('span');
+      slNo.className = 'para-sl-no';
+      slNo.textContent = obj.no || '';
+      header.appendChild(slNo);
+
+      const gistSummary = document.createElement('span');
+      gistSummary.className = 'para-gist-summary';
+      gistSummary.textContent = getGistSummary(obj.gist || '');
+      header.appendChild(gistSummary);
+
+      const tag = document.createElement('span');
+      tag.className = 'para-tag ' + (isMinor ? 'minor' : 'major');
+      tag.textContent = isMinor ? 'MINOR' : 'MAJOR';
+      header.appendChild(tag);
+
+      const summary = document.createElement('span');
+      summary.className = 'summary-pill';
+      summary.innerHTML = '<span class="pill">Det ₹0</span><span class="pill">Rec ₹0</span><span class="pill warning">Incomplete</span>';
+      summary.addEventListener('click', evt => evt.stopPropagation());
+      header.appendChild(summary);
+      card._summaryEl = summary;
+
+      const toggle = document.createElement('span');
+      toggle.className = 'para-toggle';
+      toggle.textContent = '▼';
+      header.appendChild(toggle);
+
+      card.appendChild(header);
+
+      const content = document.createElement('div');
+      content.className = 'para-content';
+
+      function createField(labelText, element){
+        const field = document.createElement('div');
+        field.className = 'para-field';
+        const label = document.createElement('label');
+        label.textContent = labelText;
+        field.appendChild(label);
+        field.appendChild(element);
+        return field;
+      }
+
+      const gistDiv = document.createElement('div');
+      gistDiv.className = 'gist-editor';
+      gistDiv.contentEditable = 'true';
+      gistDiv.dataset.role = 'gist';
+      gistDiv.setAttribute('data-placeholder','Paste text or tables here');
+      gistDiv.title = 'Describe the objection (rich text/table supported)';
+      if(obj.gist){
+        if(/<\w+[^>]*>/.test(obj.gist)){
+          gistDiv.innerHTML = obj.gist;
+        }else{
+          gistDiv.textContent = String(obj.gist);
+        }
+      }
+      gistDiv.addEventListener('paste', (e)=>{
+        try{
+          const html = e.clipboardData?.getData('text/html');
+          const text = e.clipboardData?.getData('text/plain');
+          if(html){
+            e.preventDefault();
+            document.execCommand('insertHTML', false, html);
+          }else if(text){
+            e.preventDefault();
+            document.execCommand('insertText', false, text);
+          }
+        }catch(err){ /* ignore */ }
+      });
+      gistDiv.addEventListener('input', () => {
+        gistSummary.textContent = getGistSummary(gistDiv.innerHTML || gistDiv.textContent);
+        updateParaSummary(card);
+      });
+      content.appendChild(createField('Gist of objection', gistDiv));
+
+      const revElement = isMinor ? createMinorRevenueDiv(obj.rev||obj.revLegacy||'') : createMajorRevenueDiv(obj.revStructured||obj.revMajor||obj.rev||{});
+      revElement.dataset.role = isMinor ? 'minor-rev' : 'major-rev';
+      content.appendChild(createField('Revenue implication, if any', revElement));
+
+      const agreeTextarea = document.createElement('textarea');
+      agreeTextarea.value = obj.agree || '';
+      agreeTextarea.placeholder = 'Enter assessee response / agreement details';
+      agreeTextarea.style.minHeight = '42px';
+      agreeTextarea.dataset.role = 'agree';
+      agreeTextarea.addEventListener('input', ()=> updateParaSummary(card));
+      content.appendChild(createField('Assessee/Taxable Person agreement (Yes/No — reasons if No)', agreeTextarea));
+
+      const auditTextarea = document.createElement('textarea');
+      auditTextarea.value = obj.audit || '';
+      auditTextarea.placeholder = 'Enter auditors comments, conclusion and proposal';
+      auditTextarea.style.minHeight = '42px';
+      auditTextarea.dataset.role = 'audit';
+      auditTextarea.addEventListener('input', ()=> updateParaSummary(card));
+      content.appendChild(createField('Auditors Comments, conclusion and Proposal', auditTextarea));
+
+      const actions = document.createElement('div');
+      actions.className = 'para-actions';
+      const up = document.createElement('button'); up.textContent='↑'; up.className='secondary';
+      up.onclick=()=>{
+        const prev = prevCardSameGroup(card);
+        if(prev){ parasContainer.insertBefore(card, prev); renumberParas(); }
+      };
+      const down = document.createElement('button'); down.textContent='↓'; down.className='secondary';
+      down.onclick=()=>{
+        const next = nextCardSameGroup(card);
+        if(next){ parasContainer.insertBefore(next, card); renumberParas(); }
+      };
+      const del = document.createElement('button'); del.textContent='Del'; del.className='danger';
+      del.onclick=()=>{ if(confirm('Are you sure to delete this para?')){ card.remove(); renumberParas(); } };
+      actions.appendChild(up);
+      actions.appendChild(down);
+      actions.appendChild(del);
+      content.appendChild(actions);
+
+      card.appendChild(content);
+
+      const bindSummaryTriggers = () => {
+        if(isMinor){
+          const note = card.querySelector('.rev-notes');
+          if(note) note.addEventListener('input', ()=> updateParaSummary(card));
+          card.querySelectorAll('.rev-bars input').forEach(inp => {
+            inp.addEventListener('input', ()=> updateParaSummary(card));
+          });
+        }else{
+          const majorInputs = card.querySelectorAll('[data-rev-cell="major"] input');
+          majorInputs.forEach(inp => {
+            inp.addEventListener('blur', ()=> updateParaSummary(card));
+          });
+          const majorNotes = card.querySelector('.rev-major-notes');
+          if(majorNotes) majorNotes.addEventListener('input', ()=> updateParaSummary(card));
+        }
+      };
+      bindSummaryTriggers();
+
+      updateParaSummary(card);
+
+      if(!isMinor){
+        const firstMinor = Array.from(parasContainer.children).find(el => el.matches('[data-minor="1"]'));
+        if(firstMinor){ parasContainer.insertBefore(card, firstMinor); }
+        else { parasContainer.appendChild(card); }
+      }else{
+        parasContainer.appendChild(card);
+      }
+      renumberParas();
+    }
+
+    // Tooltips for clarity
+    const addRowBtn = $('addRow'); if(addRowBtn) addRowBtn.title = 'Click here to add Major Para';
+    const addMinorBtn = $('addMinorRow'); if(addMinorBtn) addMinorBtn.title = 'Click here to add Minor Para';
+    $('addRow').onclick = ()=> addRow({}, { minor:false });
+    $('addMinorRow').onclick = ()=> addRow({}, { minor:true });
+    $('clearRows').onclick = ()=> { parasContainer.innerHTML=''; renumberParas(); };
+
+    function renumberParas(){
+      let i = 1;
+      for(const card of Array.from(parasContainer.children)){
+        if(!(card.classList && card.classList.contains('para-card'))) continue;
+        const slNo = card.querySelector('.para-sl-no');
+        if(slNo) slNo.textContent = String(i++);
+      }
+      applyGroupVisibility();
+      updatePart1TotalsFromParas();
+      updateDashboard();
+    }
+
+    function applyGroupVisibility(){
+      let hasMajor = false;
+      let hasMinor = false;
+      for(const card of Array.from(parasContainer.children)){
+        if(!(card.classList && card.classList.contains('para-card'))) continue;
+        const isMinor = card.dataset.minor === '1';
+        if(isMinor){
+          hasMinor = true;
+          card.style.display = showMinorParas ? '' : 'none';
+        }else{
+          hasMajor = true;
+          card.style.display = showMajorParas ? '' : 'none';
+        }
+      }
+      const tMajor = $('toggleMajor');
+      if(tMajor){
+        tMajor.disabled = !hasMajor;
+        tMajor.checked = hasMajor ? showMajorParas : false;
+        tMajor.parentElement?.classList.toggle('disabled', tMajor.disabled);
+      }
+      const tMinor = $('toggleMinor');
+      if(tMinor){
+        tMinor.disabled = !hasMinor;
+        tMinor.checked = hasMinor ? showMinorParas : false;
+        tMinor.parentElement?.classList.toggle('disabled', tMinor.disabled);
+      }
+      updateParaCounts();
+    }
+    function updateParaCounts(){
+      const el = $('paraCounts');
+      if(!el){ return; }
+      let majors = 0, minors = 0;
+      for(const card of Array.from(parasContainer.children)){
+        if(!(card.classList && card.classList.contains('para-card'))) continue;
+        if(card.dataset.minor === '1') minors++;
+        else majors++;
+      }
+      if(majors || minors){
+        const parts = [];
+        if(majors) parts.push(`Major ${majors}`);
+        if(minors) parts.push(`Minor ${minors}`);
+        el.textContent = parts.join(' • ');
+      }else{
+        el.textContent = 'No paras yet';
+      }
+    }
+
+    function majorRevenueDefaults(){
+      const triple = ()=>({ cgst:'', sgst:'', igst:'' });
+      return {
+        detection: {
+          tax: triple(),
+          interest: triple(),
+          penalty: triple(),
+          late: triple(),
+        },
+        recovery: {
+          tax: {
+            cgst: { itc:'', cash:'' },
+            sgst: { itc:'', cash:'' },
+            igst: { itc:'', cash:'' },
+          },
+          interest: triple(),
+          penalty: triple(),
+          late: triple(),
+        },
+        notes: ''
+      };
+    }
+    function normalizeMajorRevenueData(raw){
+      const base = majorRevenueDefaults();
+      if(!raw) return base;
+      if(typeof raw === 'string'){ base.notes = raw; return base; }
+      if(raw.notes!=null) base.notes = raw.notes;
+      if(raw.revNotes!=null) base.notes = raw.revNotes;
+      const cats = ['tax','interest','penalty','late'];
+      if(raw.detection){
+        cats.forEach(cat=>{
+          if(raw.detection[cat]){
+            ['cgst','sgst','igst'].forEach(tax=>{
+              if(raw.detection[cat][tax]!=null) base.detection[cat][tax] = raw.detection[cat][tax];
+            });
+          }
+        });
+      }else if(raw.tax || raw.interest || raw.penalty || raw.latefee){
+        base.detection.tax.cgst = raw.tax || '';
+        base.detection.interest.cgst = raw.interest || '';
+        base.detection.penalty.cgst = raw.penalty || '';
+        base.detection.late.cgst = raw.latefee || '';
+      }
+      if(raw.recovery){
+        if(raw.recovery.tax){
+          ['cgst','sgst','igst'].forEach(tax=>{
+            const node = raw.recovery.tax[tax];
+            if(!node) return;
+            if(node.itc!=null) base.recovery.tax[tax].itc = node.itc;
+            if(node.cash!=null) base.recovery.tax[tax].cash = node.cash;
+            if(node.amount!=null && !node.cash) base.recovery.tax[tax].cash = node.amount;
+          });
+        }
+        ['interest','penalty','late'].forEach(cat=>{
+          if(raw.recovery[cat]){
+            ['cgst','sgst','igst'].forEach(tax=>{
+              if(raw.recovery[cat][tax]!=null) base.recovery[cat][tax] = raw.recovery[cat][tax];
+            });
+          }
+        });
+      }else if(raw.paid){
+        base.recovery.tax.cgst.cash = raw.paid;
+      }
+      return base;
+    }
+    function parseAmount(val){
+      if(val==null) return null;
+      const str = String(val).trim();
+      if(!str) return null;
+      if(/^[Nn][Qq]$/.test(str)) return null;
+      const numVal = parseFloat(str.replace(/,/g,''));
+      return Number.isFinite(numVal) ? numVal : null;
+    }
+    function formatAmount(val, hasValue){
+      if(!hasValue) return '';
+      if(!Number.isFinite(val)) return '';
+      const opts = Number.isInteger(val) ? { minimumFractionDigits:0, maximumFractionDigits:0 } : { minimumFractionDigits:2, maximumFractionDigits:2 };
+      return val.toLocaleString('en-IN', opts);
+    }
+
+    function updateParaSummary(card){
+      if(!card) return;
+      const summaryEl = card._summaryEl || card.querySelector('.summary-pill');
+      if(!summaryEl) return;
+      let detectionTotal = 0;
+      let recoveryCash = 0;
+      let recoveryItc = 0;
+      let detectionHas = false;
+      let recoveryHas = false;
+      if(card.dataset.revMode === 'major'){
+        const data = readMajorRevenue(card) || majorRevenueDefaults();
+        ['tax','interest','penalty','late'].forEach(cat => {
+          const node = data.detection[cat];
+          if(!node) return;
+          ['cgst','sgst','igst'].forEach(tax => {
+            const val = parseAmount(node[tax]);
+            if(val !== null){ detectionTotal += val; detectionHas = true; }
+          });
+        });
+        const taxRec = data.recovery.tax || {};
+        ['cgst','sgst','igst'].forEach(tax => {
+          const bucket = taxRec[tax];
+          if(!bucket) return;
+          const itcVal = parseAmount(bucket.itc);
+          if(itcVal !== null){ recoveryItc += itcVal; recoveryHas = true; }
+          const cashVal = parseAmount(bucket.cash);
+          if(cashVal !== null){ recoveryCash += cashVal; recoveryHas = true; }
+        });
+        ['interest','penalty','late'].forEach(cat => {
+          const node = data.recovery[cat];
+          if(!node) return;
+          ['cgst','sgst','igst'].forEach(tax => {
+            const val = parseAmount(node[tax]);
+            if(val !== null){ recoveryCash += val; recoveryHas = true; }
+          });
+        });
+      }else{
+        const revContainer = card.querySelector('[data-role="minor-rev"]');
+        if(revContainer){
+          const taxVal = parseAmount(revContainer.querySelector('.rev-tax')?.value);
+          if(taxVal !== null){ detectionTotal += taxVal; detectionHas = true; }
+          const intVal = parseAmount(revContainer.querySelector('.rev-int')?.value);
+          if(intVal !== null){ detectionTotal += intVal; detectionHas = true; }
+          const penVal = parseAmount(revContainer.querySelector('.rev-pen')?.value);
+          if(penVal !== null){ detectionTotal += penVal; detectionHas = true; }
+          const lateVal = parseAmount(revContainer.querySelector('.rev-late')?.value);
+          if(lateVal !== null){ detectionTotal += lateVal; detectionHas = true; }
+          const paidVal = parseAmount(revContainer.querySelector('.rev-paid')?.value);
+          if(paidVal !== null){ recoveryCash += paidVal; recoveryHas = true; }
+        }
+      }
+      const gistDiv = card.querySelector('[data-role="gist"]');
+      const gistText = gistDiv ? (gistDiv.textContent || gistDiv.innerText || '').trim() : '';
+      const agreeText = card.querySelector('textarea[data-role="agree"]')?.value?.trim() || '';
+      const auditText = card.querySelector('textarea[data-role="audit"]')?.value?.trim() || '';
+      let statusClass = 'warning';
+      let statusLabel = 'Incomplete';
+      if(gistText && agreeText && auditText){
+        statusClass = 'success';
+        statusLabel = 'Ready';
+      }else if(gistText || agreeText || auditText){
+        statusLabel = 'In progress';
+      }
+      const detDisplay = detectionHas ? formatCurrencyValue(detectionTotal) : '—';
+      const recDisplay = recoveryHas ? formatCurrencyValue(recoveryCash + recoveryItc) : '—';
+      summaryEl.innerHTML = `<span class="pill">Det ${detDisplay}</span><span class="pill">Rec ${recDisplay}</span><span class="pill ${statusClass}">${statusLabel}</span>`;
+    }
+    function refreshAllParaSummaries(){
+      document.querySelectorAll('.para-card').forEach(card => updateParaSummary(card));
+    }
+
+    function readMajorRevenue(card){
+      if(!card || card.dataset.revMode !== 'major') return null;
+      const cell = card.querySelector('[data-rev-cell="major"]');
+      const data = majorRevenueDefaults();
+      if(!cell) return data;
+      const detInputs = cell.querySelectorAll('input[data-role="det"]');
+      detInputs.forEach(inp=>{
+        const cat = inp.dataset.category;
+        const tax = inp.dataset.tax;
+        if(cat && tax && data.detection[cat]) data.detection[cat][tax] = inp.value || '';
+      });
+      const recInputs = cell.querySelectorAll('input[data-role="rec"]');
+      recInputs.forEach(inp=>{
+        const cat = inp.dataset.category;
+        const tax = inp.dataset.tax;
+        const kind = inp.dataset.kind;
+        if(cat === 'tax' && tax && kind && data.recovery.tax[tax]){
+          data.recovery.tax[tax][kind] = inp.value || '';
+        }else if(cat && tax && data.recovery[cat]){
+          data.recovery[cat][tax] = inp.value || '';
+        }
+      });
+      const notes = cell.querySelector('.rev-major-notes');
+      if(notes) data.notes = notes.value || '';
+      return data;
+    }
+    function updateMajorCellSummaries(cell){
+      if(!cell) return;
+      const detInputs = cell.querySelectorAll('input[data-role="det"]');
+      let detSum = 0; let detHas = false;
+      detInputs.forEach(inp=>{
+        const val = parseAmount(inp.value);
+        if(val !== null){ detSum += val; detHas = true; }
+      });
+      const detOut = cell.querySelector('input[data-summary="det"]');
+      if(detOut){ detOut.value = detHas ? formatAmount(detSum, true) : ''; }
+
+      const recInputs = cell.querySelectorAll('input[data-role="rec"]');
+      let recSum = 0; let recHas = false;
+      recInputs.forEach(inp=>{
+        const val = parseAmount(inp.value);
+        if(val !== null){ recSum += val; recHas = true; }
+      });
+      const recOut = cell.querySelector('input[data-summary="rec"]');
+      if(recOut){ recOut.value = recHas ? formatAmount(recSum, true) : ''; }
+    }
+    function refreshAllMajorSummaries(){
+      document.querySelectorAll('[data-rev-cell="major"]').forEach(cell => updateMajorCellSummaries(cell));
+    }
+    function updateTotalsRibbon(totals){
+      if(!totals) return;
+      const detTotalEl = $('ribbon-det-total');
+      if(!detTotalEl) return;
+      const det = totals.detection;
+      const rec = totals.recovery;
+      const detectionSum = ['tax','interest','penalty','late'].reduce((sum, cat) => {
+        const node = det[cat];
+        return sum + (node?.cgst || 0) + (node?.sgst || 0) + (node?.igst || 0);
+      }, 0);
+      const interestSum = (det.interest?.cgst || 0) + (det.interest?.sgst || 0) + (det.interest?.igst || 0);
+      const recoveryCash = (rec.tax.cgst.cash || 0) + (rec.tax.sgst.cash || 0) + (rec.tax.igst.cash || 0)
+        + (rec.interest?.cgst || 0) + (rec.interest?.sgst || 0) + (rec.interest?.igst || 0)
+        + (rec.penalty?.cgst || 0) + (rec.penalty?.sgst || 0) + (rec.penalty?.igst || 0)
+        + (rec.late?.cgst || 0) + (rec.late?.sgst || 0) + (rec.late?.igst || 0);
+      const recoveryItc = (rec.tax.cgst.itc || 0) + (rec.tax.sgst.itc || 0) + (rec.tax.igst.itc || 0);
+      $('ribbon-det-total').textContent = formatCurrencyValue(detectionSum);
+      $('ribbon-det-interest').textContent = formatCurrencyValue(interestSum);
+      $('ribbon-rec-cash').textContent = formatCurrencyValue(recoveryCash);
+      $('ribbon-rec-itc').textContent = formatCurrencyValue(recoveryItc);
+    }
+
+    function aggregateMajorRevenue(){
+      const totals = {
+        detection: {
+          tax: { cgst:0, sgst:0, igst:0, has:false },
+          interest: { cgst:0, sgst:0, igst:0, has:false },
+          penalty: { cgst:0, sgst:0, igst:0, has:false },
+          late: { cgst:0, sgst:0, igst:0, has:false },
+          hasAny: false
+        },
+        recovery: {
+          tax: {
+            cgst: { itc:0, cash:0, hasItc:false, hasCash:false },
+            sgst: { itc:0, cash:0, hasItc:false, hasCash:false },
+            igst: { itc:0, cash:0, hasItc:false, hasCash:false },
+          },
+          interest: { cgst:0, sgst:0, igst:0, has:false },
+          penalty: { cgst:0, sgst:0, igst:0, has:false },
+          late: { cgst:0, sgst:0, igst:0, has:false },
+          hasAny: false
+        }
+      };
+      for(const card of Array.from(parasContainer.children)){
+        if(!(card.classList && card.classList.contains('para-card'))) continue;
+        if(card.dataset.revMode !== 'major') continue;
+        const data = readMajorRevenue(card);
+        if(!data) continue;
+        ['tax','interest','penalty','late'].forEach(cat=>{
+          const src = data.detection[cat];
+          if(!src) return;
+          let catHas = false;
+          ['cgst','sgst','igst'].forEach(tax=>{
+            const val = parseAmount(src[tax]);
+            if(val !== null){
+              totals.detection[cat][tax] += val;
+              catHas = true;
+            }
+          });
+          if(catHas){
+            totals.detection[cat].has = true;
+            totals.detection.hasAny = true;
+          }
+        });
+        const taxRec = data.recovery.tax || {};
+        ['cgst','sgst','igst'].forEach(tax=>{
+          const node = taxRec[tax];
+          if(!node) return;
+          const itcVal = parseAmount(node.itc);
+          if(itcVal !== null){
+            totals.recovery.tax[tax].itc += itcVal;
+            totals.recovery.tax[tax].hasItc = true;
+            totals.recovery.hasAny = true;
+          }
+          const cashVal = parseAmount(node.cash);
+          if(cashVal !== null){
+            totals.recovery.tax[tax].cash += cashVal;
+            totals.recovery.tax[tax].hasCash = true;
+            totals.recovery.hasAny = true;
+          }
+        });
+        ['interest','penalty','late'].forEach(cat=>{
+          const src = data.recovery[cat];
+          if(!src) return;
+          let catHas = false;
+          ['cgst','sgst','igst'].forEach(tax=>{
+            const val = parseAmount(src[tax]);
+            if(val !== null){
+              totals.recovery[cat][tax] += val;
+              catHas = true;
+              totals.recovery.hasAny = true;
+            }
+          });
+          if(catHas) totals.recovery[cat].has = true;
+        });
+      }
+      return totals;
+    }
+    function schedulePartTotalsUpdate(){
+      if(partTotalsTimer) clearTimeout(partTotalsTimer);
+      partTotalsTimer = setTimeout(()=>{ partTotalsTimer = null; updatePart1TotalsFromParas(); }, 200);
+    }
+    function setFieldValue(id, value){ const el = $(id); if(el){ el.value = value; } }
+    function updatePart1TotalsFromParas(){
+      const totals = aggregateMajorRevenue();
+      const detMap = [
+        { cat:'tax', field:'rev_gst_amt' },
+        { cat:'interest', field:'rev_int_amt' },
+        { cat:'penalty', field:'rev_pen_amt' },
+        { cat:'late', field:'rev_late_amt' },
+      ];
+      detMap.forEach(entry=>{
+        const cat = totals.detection[entry.cat];
+        if(!cat) return;
+        const sum = cat.cgst + cat.sgst + cat.igst;
+        setFieldValue(entry.field, formatAmount(sum, cat.has));
+      });
+      recalcRevenue();
+      if(!totals.detection.hasAny){
+        const totalField = $('rev_sum_amt'); if(totalField) totalField.value = '';
+      }
+
+      const rec = totals.recovery;
+      const gstCash = rec.tax.cgst.cash + rec.tax.sgst.cash + rec.tax.igst.cash;
+      const gstCashHas = rec.tax.cgst.hasCash || rec.tax.sgst.hasCash || rec.tax.igst.hasCash;
+      const gstItc = rec.tax.cgst.itc + rec.tax.sgst.itc + rec.tax.igst.itc;
+      const gstItcHas = rec.tax.cgst.hasItc || rec.tax.sgst.hasItc || rec.tax.igst.hasItc;
+      setFieldValue('vol_gst_cash', formatAmount(gstCash, gstCashHas));
+      setFieldValue('vol_gst_itc', formatAmount(gstItc, gstItcHas));
+
+      const recMap = [
+        { cat:'interest', field:'vol_int_cash' },
+        { cat:'penalty', field:'vol_pen_cash' },
+        { cat:'late', field:'vol_late_cash' },
+      ];
+      recMap.forEach(entry=>{
+        const cat = rec[entry.cat];
+        if(!cat) return;
+        const sum = cat.cgst + cat.sgst + cat.igst;
+        setFieldValue(entry.field, formatAmount(sum, cat.has));
+      });
+
+      // Clear ITC columns for non-tax recoveries
+      ['vol_int_itc','vol_pen_itc','vol_late_itc'].forEach(id=> setFieldValue(id, ''));
+
+      recalcVoluntary();
+      if(!rec.hasAny){
+        ['vol_sum_cash','vol_sum_itc','vol_sum_total','vol_gst_total','vol_int_total','vol_pen_total','vol_late_total'].forEach(id=> setFieldValue(id, ''));
+      }
+      refreshAllMajorSummaries();
+      refreshAllParaSummaries();
+      updateTotalsRibbon(totals);
+      formatIndianInputs(['rev_gst_amt','rev_int_amt','rev_pen_amt','rev_late_amt','rev_sum_amt','vol_gst_cash','vol_gst_itc','vol_gst_total','vol_int_cash','vol_int_total','vol_pen_cash','vol_pen_total','vol_late_cash','vol_late_total','vol_sum_cash','vol_sum_itc','vol_sum_total']);
+
+      // After updating totals, check and alert for missing revenue data
+      try { updateMissingDataWarning(); } catch(e) { /* ignore */ }
+    }
+
+    /**
+     * Scans all paras to detect those with no revenue data entered. Major paras are considered missing if all detection and recovery fields are empty.
+     * Minor paras are missing when all revenue bar inputs and notes are blank. Returns an array of Sl.No. for missing paras.
+     */
+    function checkMissingRevenueParas(){
+      const missing = [];
+      const body = document.querySelector('#paras tbody');
+      if(!body) return missing;
+      let idx = 1;
+      for(const row of Array.from(body.children)){
+        if(!row || row.dataset.groupHeader) continue;
+        let paraNo = String(idx);
+        const slInput = row.querySelector('td:first-child input');
+        if(slInput && slInput.value) paraNo = slInput.value.trim();
+        let hasData = false;
+        if(row.dataset.revMode === 'major'){
+          const data = readMajorRevenue(row);
+          if(data){
+            // detection
+            outer1: for(const cat of ['tax','interest','penalty','late']){
+              const node = data.detection[cat];
+              for(const tax of ['cgst','sgst','igst']){
+                if(parseAmount(node[tax]) !== null){ hasData = true; break outer1; }
+              }
+            }
+            if(!hasData){
+              // recovery
+              // tax (itc/cash)
+              for(const tax of ['cgst','sgst','igst']){
+                const node = data.recovery.tax[tax];
+                if(node && (parseAmount(node.itc) !== null || parseAmount(node.cash) !== null)){ hasData = true; break; }
+              }
+            }
+            if(!hasData){
+              for(const cat of ['interest','penalty','late']){
+                const node = data.recovery[cat];
+                for(const tax of ['cgst','sgst','igst']){
+                  if(parseAmount(node[tax]) !== null){ hasData = true; break; }
+                }
+                if(hasData) break;
+              }
+            }
+            // notes also count
+            if(!hasData && (data.notes||'').trim()) hasData = true;
+          }
+        } else {
+          // minor para: check rev-bars and notes
+          const noteEl = row.querySelector('textarea.rev-notes');
+          if(noteEl && (noteEl.value||'').trim()) hasData = true;
+          if(!hasData){
+            const inputs = row.querySelectorAll('.rev-bars input');
+            for(const inp of Array.from(inputs)){
+              if(parseAmount(inp.value) !== null){ hasData = true; break; }
+            }
+          }
+        }
+        if(!hasData){ missing.push(paraNo); }
+        idx++;
+      }
+      return missing;
+    }
+
+    /**
+     * Shows a toast warning if there are paras without revenue data entered. Does not disable the Generate button.
+     */
+    function updateMissingDataWarning(){
+      const missing = checkMissingRevenueParas();
+      // If there are no paras at all, do not show any warning
+      const body = document.querySelector('#paras tbody');
+      const rowCount = body ? Array.from(body.children).filter(r => !r.dataset.groupHeader).length : 0;
+      if(rowCount === 0) return;
+      if(missing.length){
+        showToast('error', `Missing revenue data in para(s): ${missing.join(', ')}`, { duration: 6000 });
+      }
+    }
+    function buildMajorRevenueSummary(data){
+      const lines = [];
+      const labels = { tax:'Tax', interest:'Interest', penalty:'Penalty', late:'Late Fee' };
+      const detLines = [];
+      ['tax','interest','penalty','late'].forEach(cat=>{
+        const node = data.detection?.[cat];
+        if(!node) return;
+        const parts = [];
+        ['cgst','sgst','igst'].forEach(tax=>{
+          if((node[tax]||'').trim()) parts.push(`${tax.toUpperCase()}: ${node[tax]}`);
+        });
+        if(parts.length) detLines.push(`${labels[cat]} – ${parts.join('; ')}`);
+      });
+      if(detLines.length){
+        lines.push('Detection:');
+        detLines.forEach(item=> lines.push(`  ${item}`));
+      }
+
+      const recLines = [];
+      const taxParts = [];
+      ['cgst','sgst','igst'].forEach(tax=>{
+        const node = data.recovery?.tax?.[tax];
+        if(!node) return;
+        const itc = (node.itc||'').trim();
+        const cash = (node.cash||'').trim();
+        if(itc || cash) taxParts.push(`${tax.toUpperCase()} (ITC: ${itc||'-'}, Cash: ${cash||'-'})`);
+      });
+      if(taxParts.length) recLines.push(`Tax – ${taxParts.join('; ')}`);
+      ['interest','penalty','late'].forEach(cat=>{
+        const node = data.recovery?.[cat];
+        if(!node) return;
+        const parts = [];
+        ['cgst','sgst','igst'].forEach(tax=>{
+          if((node[tax]||'').trim()) parts.push(`${tax.toUpperCase()}: ${node[tax]}`);
+        });
+        if(parts.length) recLines.push(`${labels[cat]} – ${parts.join('; ')}`);
+      });
+      if(recLines.length){
+        lines.push('Recovery:');
+        recLines.forEach(item=> lines.push(`  ${item}`));
+      }
+      if((data.notes||'').trim()){
+        lines.push(`Notes: ${data.notes.trim()}`);
+      }
+      return lines.join('\n');
+    }
+
+    // Risk flags UI
+    const rtbody = document.querySelector('#risks tbody');
+    function addRiskRow(obj={}){
+      const tr = document.createElement('tr');
+      function tdInput(val='') { const td=document.createElement('td'); const ta=document.createElement('textarea'); ta.value=val; ta.style.minHeight='42px'; td.appendChild(ta); return td; }
+      // Sl. No.
+      const tdNo = document.createElement('td'); const inNo=document.createElement('input'); inNo.type='text'; inNo.readOnly=true; tdNo.appendChild(inNo); tr.appendChild(tdNo);
+      // Risk Parameter
+      tr.appendChild(tdInput(obj.param||''));
+      // Description
+      tr.appendChild(tdInput(obj.desc||''));
+      // Verification (rich editor)
+      const tdV = document.createElement('td');
+      const div = document.createElement('div');
+      div.className = 'gist-editor';
+      div.contentEditable = 'true';
+      div.setAttribute('data-placeholder','Paste verification text or tables here');
+      if(obj.verifHtml){ div.innerHTML = obj.verifHtml; }
+      div.addEventListener('paste', (e)=>{
+        try{
+          const html = e.clipboardData?.getData('text/html');
+          const text = e.clipboardData?.getData('text/plain');
+          if(html){ e.preventDefault(); document.execCommand('insertHTML', false, html); }
+          else if(text){ e.preventDefault(); document.execCommand('insertText', false, text); }
+        }catch(err){ }
+      });
+      tdV.appendChild(div); tr.appendChild(tdV);
+      // Action (Delete row)
+      const tdA = document.createElement('td');
+      const del = document.createElement('button');
+      del.textContent = 'Del';
+      del.className = 'danger';
+      del.onclick = ()=>{
+        if(confirm('Are you sure to delete this risk row?')){
+          tr.remove(); renumberRisk();
+        }
+      };
+      tdA.appendChild(del);
+      tr.appendChild(tdA);
+      rtbody.appendChild(tr);
+      renumberRisk();
+    }
+    $('addRisk').onclick = ()=> addRiskRow({});
+    $('clearRisk').onclick = ()=> { rtbody.innerHTML=''; };
+    function renumberRisk(){ let i=1; for(const tr of Array.from(rtbody.children)){ if(!(tr.tagName && tr.tagName.toLowerCase()==='tr')) continue; const inNo = tr.querySelector('td:first-child input'); if(inNo) inNo.value=String(i++); } }
+
+    function norm(s){ return (s||'').toLowerCase().replace(/[\u2013\u2014]/g,'-').replace(/\s+/g,' ').replace(/[^a-z0-9&/.,:() \-]/g,'').trim(); }
+    function textOf(node){ const ts = node.getElementsByTagNameNS(WNS,'t'); let out=''; for(let i=0;i<ts.length;i++){ out+=ts[i].textContent; } return out; }
+    function getTables(doc){ return Array.from(doc.getElementsByTagNameNS(WNS,'tbl')); }
+    function getRows(tbl){ return Array.from(tbl.getElementsByTagNameNS(WNS,'tr')); }
+    function getCells(tr){ return Array.from(tr.getElementsByTagNameNS(WNS,'tc')); }
+    function getTopLevelTables(doc){
+      const body = doc.getElementsByTagNameNS(WNS,'body')[0];
+      if(!body) return [];
+      const out = [];
+      for(const node of body.childNodes){
+        if(node.namespaceURI===WNS && node.localName==='tbl') out.push(node);
+      }
+      return out;
+    }
+    function clear(node){ while(node.firstChild) node.removeChild(node.firstChild); }
+    function setCellText(doc, tc, text){
+      clear(tc);
+      const lines = (String(text||'')).split(/\r?\n/);
+      for(const line of lines){
+        const p=doc.createElementNS(WNS,'w:p'); const r=doc.createElementNS(WNS,'w:r'); const t=doc.createElementNS(WNS,'w:t');
+        if(/^\s|\s$/.test(line)) t.setAttributeNS('http://www.w3.org/XML/1998/namespace','xml:space','preserve');
+        t.textContent=line; r.appendChild(t); p.appendChild(r); tc.appendChild(p);
+      }
+    }
+
+    // Build WordprocessingML blocks for paragraphs and tables
+    function wpParagraph(doc, text, opts={}){
+      const p=doc.createElementNS(WNS,'w:p');
+      let pPr = null;
+      if(opts.align || opts.noSpacing){
+        pPr = doc.createElementNS(WNS,'w:pPr');
+        if(opts.align){
+          const jc = doc.createElementNS(WNS,'w:jc');
+          jc.setAttributeNS(WNS,'w:val', opts.align);
+          pPr.appendChild(jc);
+        }
+        if(opts.noSpacing){
+          const sp = doc.createElementNS(WNS,'w:spacing');
+          sp.setAttributeNS(WNS,'w:before','0');
+          sp.setAttributeNS(WNS,'w:after','0');
+          sp.setAttributeNS(WNS,'w:line','240');
+          sp.setAttributeNS(WNS,'w:lineRule','auto');
+          pPr.appendChild(sp);
+        }
+        p.appendChild(pPr);
+      }
+      const r=doc.createElementNS(WNS,'w:r');
+      if(opts.font || opts.size){
+        const rPr = doc.createElementNS(WNS,'w:rPr');
+        if(opts.font){
+          const rFonts = doc.createElementNS(WNS,'w:rFonts');
+          rFonts.setAttributeNS(WNS,'w:ascii', opts.font);
+          rFonts.setAttributeNS(WNS,'w:hAnsi', opts.font);
+          rPr.appendChild(rFonts);
+        }
+        if(opts.size){
+          const sz = doc.createElementNS(WNS,'w:sz'); sz.setAttributeNS(WNS,'w:val', String(opts.size)); rPr.appendChild(sz);
+          const szCs = doc.createElementNS(WNS,'w:szCs'); szCs.setAttributeNS(WNS,'w:val', String(opts.size)); rPr.appendChild(szCs);
+        }
+        r.appendChild(rPr);
+      }
+      const t=doc.createElementNS(WNS,'w:t');
+      if(/^\s|\s$/.test(text)) t.setAttributeNS('http://www.w3.org/XML/1998/namespace','xml:space','preserve');
+      t.textContent = text;
+      r.appendChild(t); p.appendChild(r); return p;
+    }
+    function wpTable(doc, matrix, opts={}){
+      const tbl = doc.createElementNS(WNS,'w:tbl');
+      const tblPr = doc.createElementNS(WNS,'w:tblPr');
+      // Configure table width and layout
+      if(opts && opts.autoFitContents){
+        // Match Word's AutoFit to Contents: prefer auto table width, no tblLayout override
+        const tblW = doc.createElementNS(WNS,'w:tblW');
+        tblW.setAttributeNS(WNS,'w:type','auto');
+        tblW.setAttributeNS(WNS,'w:w','0');
+        tblPr.appendChild(tblW);
+      }else{
+        // Default (AutoFit to window): set preferred width 100% and explicit autofit layout
+        const tblW = doc.createElementNS(WNS,'w:tblW');
+        tblW.setAttributeNS(WNS,'w:type','pct');
+        tblW.setAttributeNS(WNS,'w:w','5000'); // 100%
+        tblPr.appendChild(tblW);
+        const tblLayout = doc.createElementNS(WNS,'w:tblLayout');
+        tblLayout.setAttributeNS(WNS,'w:type', (opts && opts.equalCols) ? 'fixed' : 'autofit');
+        tblPr.appendChild(tblLayout);
+      }
+      // Borders: single line for all cells
+      const borders = doc.createElementNS(WNS,'w:tblBorders');
+      const sides = ['top','left','bottom','right','insideH','insideV'];
+      for(const side of sides){
+        const b = doc.createElementNS(WNS, 'w:'+side);
+        b.setAttributeNS(WNS,'w:val','single');
+        b.setAttributeNS(WNS,'w:sz','8');
+        b.setAttributeNS(WNS,'w:color','000000');
+        borders.appendChild(b);
+      }
+      tblPr.appendChild(borders);
+      // Build a grid for column count hint (Word recalculates widths when auto-fitting)
+      const tblGrid = doc.createElementNS(WNS,'w:tblGrid');
+      let maxCols = 0; for(const row of matrix){ if(row.length>maxCols) maxCols = row.length; }
+      for(let i=0;i<maxCols;i++){
+        const gc = doc.createElementNS(WNS,'w:gridCol');
+        gc.setAttributeNS(WNS,'w:w', (opts && opts.equalCols) ? '1000' : (opts && opts.autoFitContents ? '100' : '200'));
+        tblGrid.appendChild(gc);
+      }
+      tbl.appendChild(tblPr);
+      tbl.appendChild(tblGrid);
+      for(const row of matrix){
+        const tr = doc.createElementNS(WNS,'w:tr');
+        for(const cellText of row){
+          const tc = doc.createElementNS(WNS,'w:tc');
+          // Center align horizontally and vertically, font Aptos, size 10pt
+          const tcPr = doc.createElementNS(WNS,'w:tcPr');
+          const vAlign = doc.createElementNS(WNS,'w:vAlign'); vAlign.setAttributeNS(WNS,'w:val','center'); tcPr.appendChild(vAlign);
+          if(opts && opts.autoFitContents){
+            // Hint no preferred width on cells (auto)
+            const tcW = doc.createElementNS(WNS,'w:tcW');
+            tcW.setAttributeNS(WNS,'w:type','auto');
+            tcW.setAttributeNS(WNS,'w:w','0');
+            tcPr.appendChild(tcW);
+          }
+          tc.appendChild(tcPr);
+          const p = wpParagraph(doc, String(cellText||''), { align:'center', font:'Aptos', size:20, noSpacing: !!(opts && opts.noSpacing) });
+          tc.appendChild(p);
+          tr.appendChild(tc);
+        }
+        tbl.appendChild(tr);
+      }
+      return tbl;
+    }
+    function setCellBlocks(doc, tc, blocks, opts={}){
+      clear(tc);
+      if(!blocks || !blocks.length){ setCellText(doc, tc, ''); return; }
+      for(const b of blocks){
+        if(b && b.type==='table'){
+          tc.appendChild(wpTable(doc, b.rows||[], { equalCols: !!(opts && opts.equalCols), noSpacing: !!(opts && opts.noSpacing), autoFitContents: !!(opts && opts.autoFitContents) }));
+        }else{
+          const text = (typeof b==='string') ? b : (b?.text||'');
+          tc.appendChild(wpParagraph(doc, text, { noSpacing: !!(opts && opts.noSpacing), align: (opts && opts.align) || undefined }));
+        }
+      }
+      // Ensure an editable caret position: add a trailing empty paragraph
+      tc.appendChild(wpParagraph(doc, '', { noSpacing: !!(opts && opts.noSpacing) }));
+    }
+    
+    // Convert pasted HTML (including tables) to a readable plain text block
+    function gistHtmlToText(html){
+      if(!html) return '';
+      const tmp = document.createElement('div');
+      tmp.innerHTML = html;
+      const tables = tmp.querySelectorAll('table');
+      let parts = [];
+      if(tables.length){
+        const clone = tmp.cloneNode(true);
+        for(const t of clone.querySelectorAll('table')) t.replaceWith('\n');
+        const leading = clone.textContent.replace(/\u00A0/g,' ').trim();
+        if(leading) parts.push(leading);
+        let ti = 0;
+        for(const table of tables){
+          if(tables.length > 1) parts.push(`--- Table ${++ti} ---`);
+          for(const row of table.querySelectorAll('tr')){
+            const cells = Array.from(row.querySelectorAll('th,td')).map(c=>c.textContent.replace(/\u00A0/g,' ').trim());
+            parts.push(cells.join(' | '));
+          }
+        }
+        return parts.join('\n');
+      }
+      return tmp.textContent.replace(/\u00A0/g,' ').trim();
+    }
+
+    // Parse GIST/Verification HTML into ordered blocks, preserving tables even inside wrappers
+    // Output shape: [{type:'p', text}, {type:'table', rows:[[]]}]
+    function extractGistBlocksFromHtml(html){
+      const blocks = [];
+      if(!html) return blocks;
+      const root = document.createElement('div');
+      root.innerHTML = html;
+      function addParagraph(text){
+        const t = (text||'').replace(/\u00A0/g,' ').trim();
+        if(t) blocks.push({ type:'p', text:t });
+      }
+      function collect(node){
+        if(!node) return;
+        if(node.nodeType === 3){
+          addParagraph(node.textContent||'');
+          return;
+        }
+        if(node.nodeType !== 1) return;
+        const tag = node.tagName.toLowerCase();
+        if(tag === 'table'){
+          const rows = [];
+          for(const tr of node.querySelectorAll('tr')){
+            const cells = Array.from(tr.querySelectorAll('th,td')).map(c=>c.textContent.replace(/\u00A0/g,' ').trim());
+            rows.push(cells);
+          }
+          if(rows.length) blocks.push({ type:'table', rows });
+          return;
+        }
+        if(tag === 'ul' || tag === 'ol'){
+          let i = 0;
+          for(const li of node.querySelectorAll('li')){
+            i++;
+            const bullet = (tag==='ol') ? `${i}. ` : '• ';
+            addParagraph(bullet + (li.textContent||''));
+          }
+          return;
+        }
+        // For wrappers like div/p/section/spans etc., if they contain tables, walk children to preserve order
+        const hasTable = node.querySelector && node.querySelector('table');
+        if(hasTable){
+          for(const child of Array.from(node.childNodes)) collect(child);
+        }else{
+          // No table inside: treat entire node as a paragraph
+          addParagraph(node.textContent||'');
+        }
+      }
+      for(const child of Array.from(root.childNodes)) collect(child);
+      return blocks;
+    }
+
+    function headerValuesFromForm(){
+      const divVal = $('f_division').value;
+      const circleVal = $('f_circle')?.value || '';
+      const groupVal = $('f_group')?.value || '';
+      const officersVal = $('f_officers')?.value || '';
+      const groupBits = [];
+      if(circleVal) groupBits.push(`Circle ${circleVal}`);
+      if(groupVal) groupBits.push(`Group ${groupVal}`);
+      let groupLine = groupBits.join(', ');
+      if(officersVal){
+        groupLine = groupLine ? `${groupLine} — Officers: ${officersVal}` : `Officers: ${officersVal}`;
+      }
+      return {
+        'name of unit': $('f_name').value,
+        'address': $('f_address').value,
+        'registration no. (gst, ecc, stc)': $('f_gstin').value,
+        'division/range': divVal,
+        'commissionerate/division/range': divVal,
+        'audit group & officers': groupLine,
+        'product/service': $('f_product').value,
+        'tariff item': $('f_tariff').value,
+        'period covered': $('f_period').value,
+        'audit dates': (auditDates.length ? auditDates.join(', ') : $('f_audit_dates').value),
+        'a.r. no.': $('f_ar').value,
+        'mcm date': isoToDDMMYYYY($('f_mcm').value) || $('f_mcm').value,
+        'category': $('f_category').value,
+        'type': $('f_type').value,
+        'issuing name': $('f_iss_name')?.value || '',
+        'issuing designation': $('f_iss_desig')?.value || '',
+        'issuing circle': $('f_iss_circle')?.value || '',
+      };
+    }
+
+    // Session save/load
+    function collectSession(){
+      const fields = {
+        f_name: $('f_name').value,
+        f_gstin: $('f_gstin').value,
+        f_division: $('f_division').value,
+        f_category: $('f_category').value,
+        f_type: $('f_type').value,
+        f_product: $('f_product').value,
+        f_tariff: $('f_tariff').value,
+        f_period: $('f_period').value,
+        f_address: $('f_address').value,
+        f_group: $('f_group').value,
+        f_circle: $('f_circle')?.value || '',
+        f_officers: $('f_officers')?.value || '',
+        f_ar: $('f_ar').value,
+        f_mcm: isoToDDMMYYYY($('f_mcm').value) || $('f_mcm').value,
+        f_iss_name: $('f_iss_name')?.value || '',
+        f_iss_desig: $('f_iss_desig')?.value || '',
+        f_iss_circle: $('f_iss_circle')?.value || '',
+        auditDates: auditDates.slice(),
+      };
+      const totals = {
+        rev: {
+          gst: $('rev_gst_amt')?.value || '',
+          int: $('rev_int_amt')?.value || '',
+          pen: $('rev_pen_amt')?.value || '',
+          late: $('rev_late_amt')?.value || '',
+          sum: $('rev_sum_amt')?.value || ''
+        },
+        vol: {
+          gst: { cash: $('vol_gst_cash')?.value||'', itc: $('vol_gst_itc')?.value||'', total: $('vol_gst_total')?.value||'' },
+          int: { cash: $('vol_int_cash')?.value||'', itc: '', total: $('vol_int_total')?.value||'' },
+          pen: { cash: $('vol_pen_cash')?.value||'', itc: '', total: $('vol_pen_total')?.value||'' },
+          late:{ cash: $('vol_late_cash')?.value||'', itc: '', total: $('vol_late_total')?.value||'' },
+          sums:{ cash: $('vol_sum_cash')?.value||'', itc: $('vol_sum_itc')?.value||'', total: $('vol_sum_total')?.value||'' }
+        }
+      };
+      const paras = [];
+      for(const card of Array.from(parasContainer.children)){
+        if(!(card.classList && card.classList.contains('para-card'))) continue;
+        const no = card.querySelector('.para-sl-no')?.textContent || '';
+        // gist: capture as structured blocks (paragraphs + tables)
+        const gistDiv = card.querySelector('.gist-editor');
+        const gistHtml = gistDiv ? gistDiv.innerHTML : '';
+        const gistBlocks = extractGistBlocksFromHtml(gistHtml);
+        const isMinor = card.dataset.minor === '1';
+        let revText = '';
+        let revStructured = null;
+        if(isMinor){
+          const revDiv = card.querySelector('[data-role="minor-rev"]');
+          const rnotes = (revDiv?.querySelector('.rev-notes')?.value) || '';
+          const rtax = num(revDiv?.querySelector('.rev-tax')?.value);
+          const rint = num(revDiv?.querySelector('.rev-int')?.value);
+          const rpen = num(revDiv?.querySelector('.rev-pen')?.value);
+          const rlate = num(revDiv?.querySelector('.rev-late')?.value);
+          const rpaid = num(revDiv?.querySelector('.rev-paid')?.value);
+          const parts = [];
+          if(rtax) parts.push(`Tax: ${rtax}`);
+          if(rint) parts.push(`Interest: ${rint}`);
+          if(rpen) parts.push(`Penalty: ${rpen}`);
+          if(rlate) parts.push(`Late Fee: ${rlate}`);
+          if(rpaid) parts.push(`Paid by taxpayer: ${rpaid}`);
+          revText = [rnotes, ...(parts.length ? ['--- Breakdown ---', ...parts] : [])].filter(Boolean).join('\n');
+        }else{
+          revStructured = readMajorRevenue(card);
+        }
+        const agree = card.querySelector('textarea[data-role="agree"]')?.value || '';
+        const audit = card.querySelector('textarea[data-role="audit"]')?.value || '';
+        paras.push({
+          no,
+          gistHtml,
+          rev: revText,
+          revStructured,
+          agree,
+          audit,
+          minor: isMinor
+        });
+      }
+      const risks = [];
+      for(const tr of Array.from(rtbody.children)){
+        if(!(tr.tagName && tr.tagName.toLowerCase()==='tr')) continue;
+        const tds = tr.querySelectorAll('td');
+        const verDiv = tds[3]?.querySelector('.gist-editor');
+        risks.push({
+          param: tds[1]?.querySelector('textarea')?.value || '',
+          desc: tds[2]?.querySelector('textarea')?.value || '',
+          verifHtml: verDiv ? verDiv.innerHTML : ''
+        });
+      }
+      return { version: 1, fields, totals, paras, risks };
+    }
+    function loadAutosaves(){
+      if(typeof localStorage === 'undefined') return [];
+      try{
+        const raw = localStorage.getItem(AUTOSAVE_KEY);
+        if(!raw) return [];
+        const parsed = JSON.parse(raw);
+        if(Array.isArray(parsed)) return parsed.filter(entry => entry && entry.ts && entry.data);
+      }catch(e){ console.warn('Failed to load autosaves:', e); }
+      return [];
+    }
+    function saveAutosaves(){
+      if(typeof localStorage === 'undefined') return;
+      try{ localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(autosaves)); }
+      catch(e){ console.warn('Failed to persist autosaves:', e); }
+    }
+    function renderAutosaveInfo(){
+      const info = $('autosaveInfo');
+      const restoreBtn = $('restoreAutosave');
+      if(info){
+        if(autosaves.length){
+          const ts = autosaves[0].ts;
+          info.textContent = `Last autosave: ${formatTimestamp(ts)} (${formatRelative(ts)})`;
+        }else{
+          info.textContent = 'No autosaves yet';
+        }
+      }
+      if(restoreBtn){ restoreBtn.disabled = autosaves.length === 0; }
+    }
+    function clearAutosaveHistory(){
+      autosaves = [];
+      lastAutosaveSnapshot = '';
+      saveAutosaves();
+      renderAutosaveInfo();
+      renderAutosaveHistory();
+    }
+    function renderAutosaveHistory(){
+      const panel = $('autosaveHistoryPanel');
+      const toggleBtn = $('toggleAutosaveHistory');
+      if(toggleBtn){
+        toggleBtn.textContent = autosaveHistoryVisible ? 'Hide Autosave History' : 'Show Autosave History';
+        toggleBtn.disabled = false;
+      }
+      if(!panel) return;
+      panel.style.display = autosaveHistoryVisible ? 'block' : 'none';
+      if(!autosaveHistoryVisible) return;
+      panel.innerHTML = '';
+      const head = document.createElement('div');
+      head.className = 'autosave-history-head';
+      head.style.display = 'flex';
+      head.style.justifyContent = 'flex-end';
+      head.style.marginBottom = '8px';
+      if(autosaves.length){
+        const clearBtn = document.createElement('button');
+        clearBtn.type = 'button';
+        clearBtn.className = 'secondary';
+        clearBtn.dataset.clear = '1';
+        clearBtn.textContent = 'Clear History';
+        head.appendChild(clearBtn);
+      }else{
+        const note = document.createElement('span');
+        note.className = 'muted';
+        note.textContent = 'No autosaves yet';
+        head.appendChild(note);
+        panel.appendChild(head);
+        return;
+      }
+      panel.appendChild(head);
+      autosaves.forEach((entry, idx)=>{
+        const item = document.createElement('div');
+        item.className = 'autosave-item';
+        const meta = document.createElement('div');
+        const timeEl = document.createElement('time');
+        timeEl.textContent = formatTimestamp(entry.ts);
+        const sub = document.createElement('small');
+        sub.textContent = `Saved ${formatRelative(entry.ts)}`;
+        meta.appendChild(timeEl);
+        meta.appendChild(sub);
+        const actions = document.createElement('div');
+        const restoreBtn = document.createElement('button');
+        restoreBtn.type = 'button';
+        restoreBtn.className = 'secondary';
+        restoreBtn.dataset.restore = String(idx);
+        restoreBtn.textContent = 'Restore';
+        actions.appendChild(restoreBtn);
+        item.appendChild(meta);
+        item.appendChild(actions);
+        panel.appendChild(item);
+      });
+    }
+    function syncAutosaveSnapshot(){
+      try{ lastAutosaveSnapshot = JSON.stringify(collectSession()); }
+      catch(e){ lastAutosaveSnapshot = ''; }
+    }
+    function doAutosave(reason='interval'){
+      try{
+        const data = collectSession();
+        const json = JSON.stringify(data);
+        if(json === lastAutosaveSnapshot && reason === 'interval') return;
+        lastAutosaveSnapshot = json;
+        autosaves.unshift({ ts: new Date().toISOString(), data });
+        if(autosaves.length > AUTOSAVE_LIMIT) autosaves = autosaves.slice(0, AUTOSAVE_LIMIT);
+        saveAutosaves();
+        renderAutosaveInfo();
+        if(autosaveHistoryVisible) renderAutosaveHistory();
+      }catch(e){ console.warn('Autosave failed:', e); }
+    }
+    function startAutosaveTimer(){
+      if(autosaveTimer) clearInterval(autosaveTimer);
+      autosaveTimer = setInterval(()=>doAutosave('interval'), 30000);
+    }
+    function restoreAutosaveAt(index){
+      if(!autosaves.length){ alert('No autosaves to restore.'); return; }
+      const entry = autosaves[index];
+      if(!entry){ alert('Autosave not found.'); return; }
+      restoreSession(entry.data);
+      syncAutosaveSnapshot();
+      renderAutosaveInfo();
+      if(autosaveHistoryVisible) renderAutosaveHistory();
+      setStatus(`Restored autosave from ${formatTimestamp(entry.ts)}.`);
+    }
+    function initAutosave(){
+      if(typeof localStorage === 'undefined'){
+        const info = $('autosaveInfo');
+        if(info) info.textContent = 'Autosave unavailable (browser storage not accessible).';
+        const restoreBtn = $('restoreAutosave'); if(restoreBtn) restoreBtn.disabled = true;
+        const toggleBtn = $('toggleAutosaveHistory'); if(toggleBtn) toggleBtn.disabled = true;
+        return;
+      }
+      autosaves = loadAutosaves();
+      if(autosaves.length){
+        try{ lastAutosaveSnapshot = JSON.stringify(autosaves[0].data||{}); }
+        catch(e){ lastAutosaveSnapshot = ''; }
+      }
+      renderAutosaveInfo();
+      renderAutosaveHistory();
+      startAutosaveTimer();
+      const restoreBtn = $('restoreAutosave');
+      if(restoreBtn){ restoreBtn.addEventListener('click', ()=> restoreAutosaveAt(0)); }
+      const toggleBtn = $('toggleAutosaveHistory');
+      if(toggleBtn){ toggleBtn.addEventListener('click', ()=>{ autosaveHistoryVisible = !autosaveHistoryVisible; renderAutosaveHistory(); }); }
+      const panel = $('autosaveHistoryPanel');
+      if(panel){
+        panel.addEventListener('click', (e)=>{
+          const restoreBtn = e.target.closest('[data-restore]');
+          if(restoreBtn){
+            const idx = parseInt(restoreBtn.dataset.restore, 10);
+            if(!Number.isNaN(idx)) restoreAutosaveAt(idx);
+            return;
+          }
+          const clearBtn = e.target.closest('[data-clear]');
+          if(clearBtn){ clearAutosaveHistory(); }
+        });
+      }
+      window.addEventListener('beforeunload', ()=>{ try{ doAutosave('beforeunload'); }catch(_){} });
+      window.addEventListener('storage', (e)=>{
+        if(e.key === AUTOSAVE_KEY){
+          autosaves = loadAutosaves();
+          renderAutosaveInfo();
+          if(autosaveHistoryVisible) renderAutosaveHistory();
+        }
+      });
+      setTimeout(()=>{ try{ doAutosave('initial'); }catch(_){} }, 4000);
+    }
+    function restoreSession(data){
+      try{
+        const f = data.fields||{};
+        if('auditDates' in f){
+          const loadedDates = (f.auditDates||[]).map(d=>{
+            if(isValidDDMMYYYY(d)) return d;
+            const converted = isoToDDMMYYYY(d);
+            return isValidDDMMYYYY(converted) ? converted : '';
+          }).filter(Boolean);
+          auditDates.splice(0, auditDates.length, ...loadedDates);
+        }
+        $('f_name').value = f.f_name||'';
+        $('f_gstin').value = f.f_gstin||'';
+        $('f_division').value = f.f_division||'';
+        $('f_category').value = f.f_category||'';
+        $('f_type').value = f.f_type||'Small';
+        $('f_product').value = f.f_product||'';
+        $('f_tariff').value = f.f_tariff||'';
+        $('f_period').value = f.f_period||'';
+        $('f_address').value = f.f_address||'';
+        if($('f_circle')) $('f_circle').value = f.f_circle || '';
+        $('f_group').value = f.f_group||'';
+        if($('f_officers')) $('f_officers').value = f.f_officers || '';
+        $('f_ar').value = f.f_ar||'';
+        $('f_mcm').value = coerceToISODate(f.f_mcm||'');
+        if($('f_iss_name')) $('f_iss_name').value = f.f_iss_name||'';
+        if($('f_iss_desig')) $('f_iss_desig').value = f.f_iss_desig||'';
+        if($('f_iss_circle')) $('f_iss_circle').value = f.f_iss_circle||'';
+        renderAuditDates();
+        const t = data.totals||{};
+        const rv = t.rev||{}; const vl = t.vol||{};
+        if($('rev_gst_amt')) $('rev_gst_amt').value = rv.gst||'';
+        if($('rev_int_amt')) $('rev_int_amt').value = rv.int||'';
+        if($('rev_pen_amt')) $('rev_pen_amt').value = rv.pen||'';
+        if($('rev_late_amt')) $('rev_late_amt').value = rv.late||'';
+        if($('rev_sum_amt')) $('rev_sum_amt').value = rv.sum||'';
+        if(vl.gst){ $('vol_gst_cash').value = vl.gst.cash||''; $('vol_gst_itc').value = vl.gst.itc||''; $('vol_gst_total').value = vl.gst.total||''; }
+        if(vl.int){ $('vol_int_cash').value = vl.int.cash||''; $('vol_int_total').value = vl.int.total||''; }
+        if(vl.pen){ $('vol_pen_cash').value = vl.pen.cash||''; $('vol_pen_total').value = vl.pen.total||''; }
+        if(vl.late){ $('vol_late_cash').value = vl.late.cash||''; $('vol_late_total').value = vl.late.total||''; }
+        if(vl.sums){ $('vol_sum_cash').value = vl.sums.cash||''; $('vol_sum_itc').value = vl.sums.itc||''; $('vol_sum_total').value = vl.sums.total||''; }
+        formatIndianInputs(['rev_gst_amt','rev_int_amt','rev_pen_amt','rev_late_amt','rev_sum_amt','vol_gst_cash','vol_gst_itc','vol_gst_total','vol_int_cash','vol_int_total','vol_pen_cash','vol_pen_total','vol_late_cash','vol_late_total','vol_sum_cash','vol_sum_itc','vol_sum_total']);
+        // Paras
+        $('paras-container').innerHTML = '';
+        for(const p of (data.paras||[])){
+          const obj = {
+            no: p.no,
+            gist: p.gistHtml || '',
+            rev: p.rev || p.revLegacy || '',
+            revStructured: p.revStructured || p.revMajor || null,
+            agree: p.agree||'', audit: p.audit||''
+          };
+          addRow(obj, { minor: !!p.minor });
+        }
+        // Risks
+        rtbody.innerHTML = '';
+        for(const r of (data.risks||[])){
+          addRiskRow({ param:r.param||'', desc:r.desc||'', verifHtml:r.verifHtml||'' });
+        }
+        renumberParas();
+      }catch(e){ alert('Failed to load session: ' + (e?.message||e)); }
+    }
+
+    function paraRowsFromForm(){
+      const outRows=[];
+      let regularCount = 0, minorCount = 0;
+      for(const card of Array.from(parasContainer.children)){
+        if(!(card.classList && card.classList.contains('para-card'))) continue;
+        const no = card.querySelector('.para-sl-no')?.textContent || '';
+        // gist: capture as structured blocks (paragraphs + tables)
+        const gistDiv = card.querySelector('[data-role="gist"]');
+        const gistHtml = gistDiv ? gistDiv.innerHTML : '';
+        const gistBlocks = extractGistBlocksFromHtml(gistHtml);
+        const isMinor = card.dataset.minor === '1';
+        let revText = '';
+        let revStructured = null;
+        if(isMinor){
+          const revDiv = card.querySelector('[data-role="minor-rev"]');
+          const rnotes = (revDiv?.querySelector('.rev-notes')?.value)||'';
+          const rtax = (revDiv?.querySelector('.rev-tax')?.value)||'';
+          const rint = (revDiv?.querySelector('.rev-int')?.value)||'';
+          const rpen = (revDiv?.querySelector('.rev-pen')?.value)||'';
+          const rlate = (revDiv?.querySelector('.rev-late')?.value)||'';
+          const rpaid = (revDiv?.querySelector('.rev-paid')?.value)||'';
+          const parts = [];
+          if(rtax) parts.push(`Tax: ${rtax}`);
+          if(rint) parts.push(`Interest: ${rint}`);
+          if(rpen) parts.push(`Penalty: ${rpen}`);
+          if(rlate) parts.push(`Late Fee: ${rlate}`);
+          if(rpaid) parts.push(`Paid by taxpayer: ${rpaid}`);
+          revText = [rnotes, ...(parts.length? ['--- Breakdown ---', ...parts] : [])].filter(Boolean).join('\n');
+        }else{
+          revStructured = readMajorRevenue(card);
+          revText = buildMajorRevenueSummary(revStructured || majorRevenueDefaults());
+        }
+        const cols = [no, '', revText];
+        const agreeVal = (card.querySelector('textarea[data-role="agree"]')?.value)||'';
+        const auditVal = (card.querySelector('textarea[data-role="audit"]')?.value)||'';
+        cols[3] = agreeVal;
+        cols[4] = auditVal;
+        cols[5] = '';
+        cols[6] = '';
+        cols[7] = '';
+        if(isMinor) minorCount++; else regularCount++;
+        const rowOut = { cols, gistBlocks, minor:isMinor };
+        if(!isMinor) rowOut.revStructured = revStructured;
+        outRows.push(rowOut);
+      }
+      return { rows: outRows, counts: { total: regularCount + minorCount, regular: regularCount, minor: minorCount } };
+    }
+
+    function computeDashboardAggregates(){
+      const aggregates = {
+        totalParas: 0,
+        cgstDet: 0, sgstDet: 0, igstDet: 0,
+        cgstRec: 0, sgstRec: 0, igstRec: 0,
+        flags: [],
+        missing: []
+      };
+      for(const card of Array.from(parasContainer.children)){
+        if(!(card.classList && card.classList.contains('para-card'))) continue;
+        aggregates.totalParas++;
+        const isMinor = card.dataset.minor === '1';
+        if(!isMinor){
+          const revDiv = card.querySelector('[data-role="major-rev"]');
+          const detInputs = revDiv?.querySelectorAll('input[data-role="det"]');
+          const recInputs = revDiv?.querySelectorAll('input[data-role="rec"]');
+          detInputs?.forEach(input => {
+            const tax = input.dataset.tax;
+            const val = num(input.value);
+            if(!Number.isFinite(val)) return;
+            if(tax === 'cgst') aggregates.cgstDet += val;
+            else if(tax === 'sgst') aggregates.sgstDet += val;
+            else if(tax === 'igst') aggregates.igstDet += val;
+          });
+          recInputs?.forEach(input => {
+            const tax = input.dataset.tax;
+            const val = num(input.value);
+            if(!Number.isFinite(val)) return;
+            if(tax === 'cgst') aggregates.cgstRec += val;
+            else if(tax === 'sgst') aggregates.sgstRec += val;
+            else if(tax === 'igst') aggregates.igstRec += val;
+          });
+        }
+        const sl = card.querySelector('.para-sl-no')?.textContent || '';
+        const gistNode = card.querySelector('[data-role="gist"]');
+        const gistText = gistNode ? (gistNode.textContent || gistNode.innerText || '').replace(/ /g,' ').trim() : '';
+        const agreeNode = card.querySelector('textarea[data-role="agree"]');
+        const agreeText = agreeNode ? agreeNode.value.trim() : '';
+        const auditNode = card.querySelector('textarea[data-role="audit"]');
+        const auditText = auditNode ? auditNode.value.trim() : '';
+        if(!isMinor){
+          if(!gistText){
+            aggregates.flags.push(`Para ${sl || '?'}: Missing gist`);
+            if(gistNode) aggregates.missing.push(gistNode);
+          }
+          if(!agreeText){
+            aggregates.flags.push(`Para ${sl || '?'}: Missing assessee agreement`);
+            if(agreeNode) aggregates.missing.push(agreeNode);
+          }
+          if(!auditText){
+            aggregates.flags.push(`Para ${sl || '?'}: Missing auditors comments`);
+            if(auditNode) aggregates.missing.push(auditNode);
+          }
+        }
+      }
+      return aggregates;
+    }
+
+    function updateDashboard(){
+      const agg = computeDashboardAggregates();
+      $('dash-total-paras').textContent = agg.totalParas;
+      $('dash-cgst-det').textContent = '₹' + formatIndianNumberString(agg.cgstDet);
+      $('dash-sgst-det').textContent = '₹' + formatIndianNumberString(agg.sgstDet);
+      $('dash-igst-det').textContent = '₹' + formatIndianNumberString(agg.igstDet);
+      $('dash-cgst-rec').textContent = '₹' + formatIndianNumberString(agg.cgstRec);
+      $('dash-sgst-rec').textContent = '₹' + formatIndianNumberString(agg.sgstRec);
+      $('dash-igst-rec').textContent = '₹' + formatIndianNumberString(agg.igstRec);
+      const flagsDiv = $('dashboard-flags');
+      flagsDiv.innerHTML = '';
+      if(agg.flags.length){
+        agg.flags.forEach(flag => {
+          const div = document.createElement('div');
+          div.className = 'flag';
+          div.textContent = flag;
+          flagsDiv.appendChild(div);
+        });
+      }
+      applyFieldHighlights(agg.missing);
+      const dashboard = $('dashboard-ribbon');
+      if(dashboard){
+        dashboard.style.display = (agg.totalParas > 0 || agg.flags.length) ? 'block' : 'none';
+      }
+    }
+
+    // Nested table helpers (Table-1 rows 15 & 16)
+    function num(v){ const n=parseFloat((v||'').toString().replace(/[,\s]/g,'')); return isFinite(n)?n:0; }
+    function setIfNumber(el, val){ if(!el) return; el.value = (val===undefined||val===null) ? '' : String(val); }
+    function recalcRevenue(){
+      const items=['gst','int','pen','late'];
+      let sum=0;
+      for(const k of items){ const el = $('rev_'+k+'_amt'); sum += num(el?.value); }
+      setIfNumber($('rev_sum_amt'), sum);
+      formatIndianInputs(['rev_gst_amt','rev_int_amt','rev_pen_amt','rev_late_amt','rev_sum_amt']);
+    }
+    function recalcVoluntary(){
+      const items=['gst','int','pen','late'];
+      let sumCash=0, sumItc=0, sumTot=0;
+      for(const k of items){
+        const cashEl = $('vol_'+k+'_cash');
+        const c = num(cashEl?.value);
+        const itcEl = $('vol_'+k+'_itc');
+        // Only GST row has ITC; others stay blank
+        const i = (k==='gst') ? num(itcEl?.value) : 0;
+        if(k !== 'gst' && itcEl){ itcEl.value = ''; }
+        // Always recompute row total from Cash + ITC
+        const tEl = $('vol_'+k+'_total');
+        const total = c + i;
+        setIfNumber(tEl, total);
+        sumCash += c; sumItc += i; sumTot += total;
+      }
+      setIfNumber($('vol_sum_cash'), sumCash);
+      setIfNumber($('vol_sum_itc'), sumItc);
+      setIfNumber($('vol_sum_total'), sumTot);
+      formatIndianInputs(['vol_gst_cash','vol_gst_itc','vol_gst_total','vol_int_cash','vol_int_total','vol_pen_cash','vol_pen_total','vol_late_cash','vol_late_total','vol_sum_cash','vol_sum_itc','vol_sum_total']);
+    }
+    function wireNestedAutoCalc(){
+      const revIds=['rev_gst_amt','rev_int_amt','rev_pen_amt','rev_late_amt'];
+      for(const id of revIds){ const el=$(id); if(el){ el.addEventListener('input', coerceNumOrNQInput); el.addEventListener('input', recalcRevenue); } }
+      const volIds=['vol_gst_cash','vol_gst_itc','vol_gst_total','vol_int_cash','vol_int_itc','vol_int_total','vol_pen_cash','vol_pen_itc','vol_pen_total','vol_late_cash','vol_late_itc','vol_late_total'];
+      for(const id of volIds){ const el=$(id); if(el){ el.addEventListener('input', coerceNumOrNQInput); el.addEventListener('input', recalcVoluntary); } }
+    }
+    function coerceNumOrNQInput(e){
+      const el = e.target;
+      let v = (el.value||'').trim();
+      // Allow progressive entry of NQ: N -> NQ
+      if(/^[Nn]$/.test(v)){ el.value = 'N'; return; }
+      if(/^[Nn][Qq]$/.test(v)){ el.value = 'NQ'; return; }
+      // Otherwise allow numbers with commas and a single decimal dot
+      v = v.replace(/[^0-9.,]/g,'');
+      const parts = v.split('.');
+      if(parts.length > 1){
+        // keep only first dot
+        v = parts[0] + '.' + parts.slice(1).join('').replace(/\./g,'');
+      }
+      el.value = v;
+    }
+    function nestedTotalsFromForm(){
+      function readVol(){
+        const rows=[
+          {label:'GST', key:'gst'},
+          {label:'Interest', key:'int'},
+          {label:'Penalty', key:'pen'},
+          {label:'Late Fee', key:'late'}
+        ];
+        const out=[];
+        for(const r of rows){
+          const cash = ($("vol_"+r.key+"_cash")?.value)||'';
+          const itc = (r.key==='gst') ? (($("vol_"+r.key+"_itc")?.value)||'') : '';
+          const total = ($("vol_"+r.key+"_total")?.value)||'';
+          out.push({ label:r.label, cash, itc, total });
+        }
+        out.push({ label:'Total', cash: ($("vol_sum_cash")?.value)||'', itc: ($("vol_sum_itc")?.value)||'', total: ($("vol_sum_total")?.value)||'' });
+        return out;
+      }
+      function readRev(){
+        const rows=[
+          {label:'GST', key:'gst'},
+          {label:'Interest', key:'int'},
+          {label:'Penalty', key:'pen'},
+          {label:'Late Fee', key:'late'}
+        ];
+        const out=[];
+        for(const r of rows){ out.push({ label:r.label, amount: ($("rev_"+r.key+"_amt")?.value)||'' }); }
+        out.push({ label:'Total', amount: ($("rev_sum_amt")?.value)||'' });
+        return out;
+      }
+      return { revenue: readRev(), voluntary: readVol() };
+    }
+
+    // Remove editing protections from the DOCX (settings.xml) and locks in document.xml
+    async function stripProtections(zip, xml){
+      try{
+        // 1) settings.xml: remove w:documentProtection, w:readOnlyRecommended, w:trackRevisions
+        const settingsEntry = zip.file('word/settings.xml');
+        if(settingsEntry){
+          const sTxt = await settingsEntry.async('string');
+          const sDom = new DOMParser().parseFromString(sTxt, 'application/xml');
+          const settingsEl = sDom.getElementsByTagNameNS(WNS,'settings')[0];
+          if(settingsEl){
+            const toRemove = ['documentProtection','readOnlyRecommended','trackRevisions'];
+            for(const name of toRemove){
+              const nodes = settingsEl.getElementsByTagNameNS(WNS, name);
+              for(let i=nodes.length-1;i>=0;i--) settingsEl.removeChild(nodes[i]);
+            }
+          }
+          const sOut = new XMLSerializer().serializeToString(sDom);
+          zip.file('word/settings.xml', sOut);
+        }
+      }catch(e){ /* ignore best-effort */ }
+      try{
+        // 2) document.xml: remove any w:lock in content controls (sdtPr)
+        const locks = xml.getElementsByTagNameNS(WNS,'lock');
+        for(let i=locks.length-1;i>=0;i--){ const n=locks[i]; if(n.parentNode) n.parentNode.removeChild(n); }
+      }catch(e){ /* ignore best-effort */ }
+    }
+
+    // Embedded template (Target.docx) as Base64
+    const BASE64_TEMPLATE = (function(){
+      // This string is injected from your fixed template
+      return "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";
+    })();
+
+    function base64ToUint8Array(b64){
+      const bin = atob(b64);
+      const len = bin.length;
+      const bytes = new Uint8Array(len);
+      for(let i=0;i<len;i++) bytes[i] = bin.charCodeAt(i);
+      return bytes;
+    }
+
+    async function readEmbeddedTemplate(){
+      const buf = base64ToUint8Array(BASE64_TEMPLATE);
+      const zip = await JSZip.loadAsync(buf);
+      const xmlTxt = await zip.file('word/document.xml').async('string');
+      const parser = new DOMParser();
+      const xml = parser.parseFromString(xmlTxt, 'application/xml');
+      let sharedStringsXml = null;
+      if(zip.file('word/sharedStrings.xml')){
+        const ssTxt = await zip.file('word/sharedStrings.xml').async('string');
+        sharedStringsXml = parser.parseFromString(ssTxt, 'application/xml');
+      }
+      return { zip, xml, sharedStringsXml };
+    }
+    async function writeXmlDocx(zip, xml, sharedStringsXml){
+      const ser = new XMLSerializer();
+      const xmlTxt = ser.serializeToString(xml);
+      zip.file('word/document.xml', xmlTxt);
+      if(sharedStringsXml){
+        const ssTxt = ser.serializeToString(sharedStringsXml);
+        zip.file('word/sharedStrings.xml', ssTxt);
+      }
+      const out = await zip.generateAsync({ type: 'blob' });
+      return out;
+    }
+
+    function fillTemplateXml(xml, sharedStringsXml, headerVals, paraRows, riskRows){
+      // Ensure page size = Indian Legal (8.5" x 14")
+      try{
+        const body = xml.getElementsByTagNameNS(WNS,'body')[0];
+        if(body){
+          let sectPr = body.getElementsByTagNameNS(WNS,'sectPr')[0];
+          if(!sectPr){ sectPr = xml.createElementNS(WNS,'w:sectPr'); body.appendChild(sectPr); }
+          let pgSz = sectPr.getElementsByTagNameNS(WNS,'pgSz')[0];
+          if(!pgSz){ pgSz = xml.createElementNS(WNS,'w:pgSz'); sectPr.insertBefore(pgSz, sectPr.firstChild); }
+          // Indian Legal landscape: width = 14in (20160 twips), height = 8.5in (12240 twips)
+          pgSz.setAttributeNS(WNS,'w:w','20160');
+          pgSz.setAttributeNS(WNS,'w:h','12240');
+          pgSz.setAttributeNS(WNS,'w:orient','landscape');
+        }
+      }catch(e){ /* best-effort */ }
+      const tables = getTopLevelTables(xml);
+      if(!tables.length) throw new Error('Template has no tables.');
+      // Replace "voluntary" with "Recoveries" and "payment" with "" (case insensitive) in document.xml and sharedStrings.xml
+      const allTexts = xml.getElementsByTagNameNS(WNS, 't');
+      for(const t of Array.from(allTexts)){
+        let content = t.textContent;
+        content = content.replace(/voluntary/gi, 'Recoveries');
+        content = content.replace(/payment/gi, '');
+        t.textContent = content;
+      }
+      // Replace "voluntary" with "Recoveries" and "payment" with "" (case insensitive) in sharedStrings.xml
+      if(sharedStringsXml){
+        const ssTexts = sharedStringsXml.getElementsByTagNameNS(WNS, 't');
+        for(const t of Array.from(ssTexts)){
+          let content = t.textContent;
+          content = content.replace(/voluntary/gi, 'Recoveries');
+          content = content.replace(/payment/gi, '');
+          t.textContent = content;
+        }
+      }
+      // Table 0: header/meta values
+      const hdr = tables[0];
+      const nested = nestedTotalsFromForm();
+      for(const tr of getRows(hdr)){
+        const cells = getCells(tr);
+        if(cells.length < 3) continue;
+        const label = norm(textOf(cells[1]));
+        // Handle nested tables for rows 15 and 16 (be tolerant of extra text in cell)
+        if(label.includes('total revenue detection') || label.includes('total voluntary payment')){
+          const nt = cells[2].getElementsByTagNameNS(WNS,'tbl')[0];
+          if(nt){
+            const rows = getRows(nt); // expect header + rows
+            if(label.indexOf('revenue')>=0){
+              // Transform nested table to 2 columns: Description | Amount (Rs.)
+              // Update grid to 2 columns
+              const grid = nt.getElementsByTagNameNS(WNS,'tblGrid')[0];
+              if(grid){
+                // clear existing gridCols
+                while(grid.firstChild) grid.removeChild(grid.firstChild);
+                const gc1 = xml.createElementNS(WNS,'w:gridCol'); gc1.setAttributeNS(WNS,'w:w','3000');
+                const gc2 = xml.createElementNS(WNS,'w:gridCol'); gc2.setAttributeNS(WNS,'w:w','3800');
+                grid.appendChild(gc1); grid.appendChild(gc2);
+              }
+              // Header row
+              if(rows.length){
+                const hcs = getCells(rows[0]);
+                // Ensure two cells
+                // Keep first cell (Description), replace second with new and remove extras
+                let second = hcs[1];
+                if(!second){ second = xml.createElementNS(WNS,'w:tc'); rows[0].appendChild(second); }
+                // Remove any extra cells beyond 2
+                for(let j=hcs.length-1;j>=2;j--){ rows[0].removeChild(hcs[j]); }
+                setCellText(xml, second, 'Amount (Rs.)');
+              }
+              const data = nested.revenue; // [{label, amount} ...]
+              for(let i=1;i<rows.length && (i-1)<data.length;i++){
+                const cs = getCells(rows[i]);
+                // Ensure exactly 2 cells
+                let desc = cs[0];
+                let amt = cs[1];
+                if(!amt){ amt = xml.createElementNS(WNS,'w:tc'); rows[i].appendChild(amt); }
+                // Remove extras beyond 2 (e.g., prior Cash/ITC/Total cells)
+                for(let j=getCells(rows[i]).length-1;j>=2;j--){ rows[i].removeChild(getCells(rows[i])[j]); }
+                const d = data[i-1];
+                // Keep existing description text; just set amount
+                setCellText(xml, amt, d.amount||'');
+              }
+            }else{
+              const data = nested.voluntary;
+              for(let i=1; i<rows.length && (i-1)<data.length; i++){
+                const cs = getCells(rows[i]);
+                const d = data[i-1];
+                const cash = d.cash || '';
+                const itc = d.itc || '';
+                const total = d.total && d.total.trim()!=='' ? d.total : String((num(d.cash)||0)+(num(d.itc)||0));
+                if(cs[1]) setCellText(xml, cs[1], cash);
+                if(cs[2]) setCellText(xml, cs[2], itc);
+                if(cs[3]) setCellText(xml, cs[3], total);
+              }
+            }
+          }
+          continue;
+        }
+        // Rename label Division/Range -> Commissionerate/Division/Range in template
+        // Normalize Division/Range label in template
+        if(label === 'division/range'){
+          setCellText(xml, cells[1], 'Commissionerate/Division/Range');
+        }
+        const v = headerVals[label];
+        if(v!=null && v!==''){ setCellText(xml, cells[2], v); }
+      }
+      // Table 1: objections
+      if(tables.length >= 2){
+        const tgt = tables[1];
+        // Make the table auto-fit to window (page) width
+        let tblPr = tgt.getElementsByTagNameNS(WNS,'tblPr')[0];
+        if(!tblPr){ tblPr = xml.createElementNS(WNS,'w:tblPr'); tgt.insertBefore(tblPr, tgt.firstChild); }
+        let tblW = tblPr.getElementsByTagNameNS(WNS,'tblW')[0];
+        if(!tblW){ tblW = xml.createElementNS(WNS,'w:tblW'); tblPr.appendChild(tblW); }
+        tblW.setAttributeNS(WNS,'w:type','pct');
+        tblW.setAttributeNS(WNS,'w:w','5000'); // 100%
+        let tblLayout = tblPr.getElementsByTagNameNS(WNS,'tblLayout')[0];
+        if(!tblLayout){ tblLayout = xml.createElementNS(WNS,'w:tblLayout'); tblPr.appendChild(tblLayout); }
+        tblLayout.setAttributeNS(WNS,'w:type','autofit');
+        // Ensure enough rows by cloning last row
+        const baseRows = getRows(tgt);
+        let headerIndex = null;
+        // Also widen header's gist column cell
+        if(baseRows.length){
+          const hdrCells = getCells(baseRows[0]);
+          const gistHdr = hdrCells[1];
+          if(gistHdr){
+            let tcPr = gistHdr.getElementsByTagNameNS(WNS,'tcPr')[0]; if(!tcPr){ tcPr = xml.createElementNS(WNS,'w:tcPr'); gistHdr.insertBefore(tcPr, gistHdr.firstChild); }
+            let tcW = tcPr.getElementsByTagNameNS(WNS,'tcW')[0]; if(!tcW){ tcW = xml.createElementNS(WNS,'w:tcW'); tcPr.appendChild(tcW); }
+            // Set Gist column to 75% of page width (as pct of table width)
+            tcW.setAttributeNS(WNS,'w:type','pct');
+            tcW.setAttributeNS(WNS,'w:w','3750'); // 75% (pct units: 5000 = 100%)
+          }
+        }
+        // Build header map for robust column placement
+        const hdrCells = getCells(baseRows[0]||{});
+        const hdrMap = {};
+        for(let i=0;i<(hdrCells?hdrCells.length:0);i++){
+          const t = norm(textOf(hdrCells[i]));
+          if(t) hdrMap[t] = i;
+        }
+        const findHdr = (candidates)=>{
+          for(const c of candidates){ if(hdrMap[c]!==undefined) return hdrMap[c]; }
+          const keys = Object.keys(hdrMap);
+          for(const c of candidates){ const k = keys.find(k => k.indexOf(c)>=0); if(k) return hdrMap[k]; }
+          return -1;
+        };
+        headerIndex = {
+          idxNo: findHdr(['sl.no.','sl. no.','slno','serial']),
+          idxGist: findHdr(['gist of objection','gist']),
+          idxRev: findHdr(['revenue implication, if any','revenue implication']),
+          idxAgree: findHdr(['assessee/taxable person agreement (yes/no — reasons if no)','assessee/taxable person agreement (yes/no - reasons if no)','assessee/taxable person agreement']),
+          idxAudit: findHdr(['auditors comments, conclusion and proposal','auditors comments']),
+          idxMcm: findHdr(['decision of the mcm','mcm']),
+          idxStatus: findHdr(['whether para closed or pending','status']),
+          idxRemarks: findHdr(['remarks']),
+          headerLen: hdrCells ? hdrCells.length : 0
+        };
+        // Remove any body rows (keep header) and then add exactly paraRows.length rows
+        while(getRows(tgt).length > 1){ tgt.removeChild(getRows(tgt)[getRows(tgt).length-1]); }
+        const templateRow = baseRows[baseRows.length-1].cloneNode(true);
+        for(let i=0;i<paraRows.length;i++){
+          const rowData = paraRows[i];
+          const isLegacy = Array.isArray(rowData);
+          const clone = templateRow.cloneNode(true);
+          let cells = getCells(clone);
+          for(const tc of cells) setCellText(xml, tc, '');
+          // Ensure row has at least header number of cells
+          const headerLen = (headerIndex && headerIndex.headerLen) ? headerIndex.headerLen : cells.length;
+          while(getCells(clone).length < headerLen){ clone.appendChild(xml.createElementNS(WNS,'w:tc')); }
+          cells = getCells(clone);
+          if(isLegacy){
+            for(let ci=0; ci<Math.min(8, cells.length); ci++){
+              const val = (ci < rowData.length) ? rowData[ci] : '';
+              setCellText(xml, cells[ci], val);
+            }
+          }else{
+            const cols = rowData.cols || [];
+            const gi = (headerIndex && headerIndex.idxGist>=0) ? headerIndex.idxGist : 1;
+            const ni = (headerIndex && headerIndex.idxNo>=0) ? headerIndex.idxNo : 0;
+            const ri = (headerIndex && headerIndex.idxRev>=0) ? headerIndex.idxRev : 2;
+            const ai = (headerIndex && headerIndex.idxAgree>=0) ? headerIndex.idxAgree : 3;
+            const au = (headerIndex && headerIndex.idxAudit>=0) ? headerIndex.idxAudit : 4;
+            const mi = (headerIndex && headerIndex.idxMcm>=0) ? headerIndex.idxMcm : 5;
+            const si = (headerIndex && headerIndex.idxStatus>=0) ? headerIndex.idxStatus : 6;
+            const rm = (headerIndex && headerIndex.idxRemarks>=0) ? headerIndex.idxRemarks : 7;
+            if(cells[ni]) setCellText(xml, cells[ni], cols[0]||'');
+            if(cells[gi]){
+              if(rowData.gistBlocks && rowData.gistBlocks.length){
+                // Autofit to Window + justify paragraphs inside Gist
+                setCellBlocks(xml, cells[gi], rowData.gistBlocks, { noSpacing: true, align: 'both' });
+              }else{ setCellText(xml, cells[gi], ''); }
+            }
+            if(cells[ri]) setCellText(xml, cells[ri], cols[2]||'');
+            if(cells[ai]) setCellText(xml, cells[ai], cols[3]||'');
+            if(cells[au]) setCellText(xml, cells[au], cols[4]||'');
+            if(cells[mi]) setCellText(xml, cells[mi], cols[5]||'');
+            if(cells[si]) setCellText(xml, cells[si], cols[6]||'');
+            if(cells[rm]) setCellText(xml, cells[rm], cols[7]||'');
+          }
+          // GIST cell width behavior uses detected gist index
+          const gistIndex = (headerIndex && headerIndex.idxGist>=0) ? headerIndex.idxGist : 1;
+          const gistCell = cells[gistIndex];
+          if(gistCell){
+            let tcPr = gistCell.getElementsByTagNameNS(WNS,'tcPr')[0]; if(!tcPr){ tcPr = xml.createElementNS(WNS,'w:tcPr'); gistCell.insertBefore(tcPr, gistCell.firstChild); }
+            // Detect whether this row had table blocks
+            const hasTableBlocks = !isLegacy && Array.isArray(rowData.gistBlocks) && rowData.gistBlocks.some(b => b && b.type==='table' && (b.rows||[]).length);
+            let tcW = tcPr.getElementsByTagNameNS(WNS,'tcW')[0]; if(!tcW){ tcW = xml.createElementNS(WNS,'w:tcW'); tcPr.appendChild(tcW); }
+            if(hasTableBlocks){
+              tcW.setAttributeNS(WNS,'w:type','auto');
+              tcW.setAttributeNS(WNS,'w:w','0');
+            }else{
+              tcW.setAttributeNS(WNS,'w:type','pct');
+              tcW.setAttributeNS(WNS,'w:w','3750');
+            }
+          }
+          tgt.appendChild(clone);
+        }
+      }
+
+      // Table 2: Risk Flags (4 columns: No., Risk Parameter, Description, Verification)
+      if(tables.length >= 3){
+        const rt = tables[2];
+        const rows = getRows(rt);
+        if(rows.length){
+          const hdr = rows[0];
+          // Ensure grid has 4 columns
+          const grid = rt.getElementsByTagNameNS(WNS,'tblGrid')[0];
+          if(grid){
+            while(grid.firstChild) grid.removeChild(grid.firstChild);
+            for(let i=0;i<4;i++){ const gc = xml.createElementNS(WNS,'w:gridCol'); gc.setAttributeNS(WNS,'w:w', String(2000)); grid.appendChild(gc); }
+          }
+          // Ensure header has 4 cells with new titles
+          const hcs = getCells(hdr);
+          while(hcs.length < 4){ hdr.appendChild(xml.createElementNS(WNS,'w:tc')); hcs.push(getCells(hdr)[getCells(hdr).length-1]); }
+          while(getCells(hdr).length > 4){ hdr.removeChild(getCells(hdr)[getCells(hdr).length-1]); }
+          setCellText(xml, getCells(hdr)[0], 'Sl. No.');
+          setCellText(xml, getCells(hdr)[1], 'Risk Parameter');
+          setCellText(xml, getCells(hdr)[2], 'Description');
+          setCellText(xml, getCells(hdr)[3], 'Verification');
+        }
+        // remove existing body rows
+        while(getRows(rt).length > 1){ rt.removeChild(getRows(rt)[getRows(rt).length-1]); }
+        const base = getRows(rt)[0];
+        let idx = 1;
+        for(const r of riskRows){
+          const tr = base.cloneNode(true);
+          const cells = getCells(tr);
+          // Ensure 4 body cells
+          while(cells.length < 4){ tr.appendChild(xml.createElementNS(WNS,'w:tc')); cells.push(getCells(tr)[getCells(tr).length-1]); }
+          while(getCells(tr).length > 4){ tr.removeChild(getCells(tr)[getCells(tr).length-1]); }
+          for(const tc of getCells(tr)) setCellText(xml, tc, '');
+          // Fill columns
+          if(cells[0]) setCellText(xml, cells[0], String(r.no || idx));
+          if(cells[1]) setCellText(xml, cells[1], r.param || '');
+          if(cells[2]) setCellText(xml, cells[2], r.desc || '');
+          if(cells[3]){
+            const hasVB = r.verifBlocks && r.verifBlocks.length;
+            if(hasVB){
+              // Autofit to Window for nested tables
+              setCellBlocks(xml, cells[3], r.verifBlocks, { noSpacing: true });
+              // Set the Verification cell width to auto when it hosts a nested table
+              let tcPr = cells[3].getElementsByTagNameNS(WNS,'tcPr')[0]; if(!tcPr){ tcPr = xml.createElementNS(WNS,'w:tcPr'); cells[3].insertBefore(tcPr, cells[3].firstChild); }
+              let tcW = tcPr.getElementsByTagNameNS(WNS,'tcW')[0]; if(!tcW){ tcW = xml.createElementNS(WNS,'w:tcW'); tcPr.appendChild(tcW); }
+              tcW.setAttributeNS(WNS,'w:type','auto'); tcW.setAttributeNS(WNS,'w:w','0');
+            }else{
+              setCellText(xml, cells[3], r.verif || '');
+            }
+          }
+          rt.appendChild(tr); idx++;
+        }
+      }
+      // Append Issuing Authority block (bottom-right; centered text within) after Table-3
+      try{
+        const body = xml.getElementsByTagNameNS(WNS,'body')[0];
+        if(body){
+          const name = (headerVals['issuing name']||'').trim();
+          const desig = (headerVals['issuing designation']||'').trim();
+          const circle = (headerVals['issuing circle']||'').trim();
+          if(name || desig || circle){
+            const tbl = xml.createElementNS(WNS,'w:tbl');
+            const tblPr = xml.createElementNS(WNS,'w:tblPr');
+            const jc = xml.createElementNS(WNS,'w:jc'); jc.setAttributeNS(WNS,'w:val','right'); tblPr.appendChild(jc);
+            const tblW = xml.createElementNS(WNS,'w:tblW'); tblW.setAttributeNS(WNS,'w:type','auto'); tblW.setAttributeNS(WNS,'w:w','0'); tblPr.appendChild(tblW);
+            const borders = xml.createElementNS(WNS,'w:tblBorders'); // no borders
+            tblPr.appendChild(borders);
+            tbl.appendChild(tblPr);
+            const grid = xml.createElementNS(WNS,'w:tblGrid'); const gc = xml.createElementNS(WNS,'w:gridCol'); gc.setAttributeNS(WNS,'w:w','4000'); grid.appendChild(gc); tbl.appendChild(grid);
+            const tr = xml.createElementNS(WNS,'w:tr');
+            const tc = xml.createElementNS(WNS,'w:tc');
+            const tcPr = xml.createElementNS(WNS,'w:tcPr'); const tcW = xml.createElementNS(WNS,'w:tcW'); tcW.setAttributeNS(WNS,'w:type','auto'); tcW.setAttributeNS(WNS,'w:w','0'); tcPr.appendChild(tcW); tc.appendChild(tcPr);
+            // Compose centered lines (No Spacing); add one blank line for signatures above name
+            tc.appendChild(wpParagraph(xml, '', { align:'center', noSpacing:true }));
+            if(name){ tc.appendChild(wpParagraph(xml, `(${name})`, { align:'center', font:'Aptos', size:22, noSpacing:true })); }
+            if(desig){ tc.appendChild(wpParagraph(xml, desig, { align:'center', font:'Aptos', size:22, noSpacing:true })); }
+            if(circle){ tc.appendChild(wpParagraph(xml, `Circle-${circle}, CGST Audit Thane`, { align:'center', font:'Aptos', size:22, noSpacing:true })); }
+            tr.appendChild(tc); tbl.appendChild(tr);
+            // Append block (no extra spacer paragraph)
+            body.appendChild(tbl);
+          }
+        }
+      }catch(e){ /* ignore */ }
+      return xml;
+    }
+
+    function riskRowsFromForm(){
+      const rows = [];
+      let no = 1;
+      for(const tr of Array.from(rtbody.children)){
+        if(!(tr.tagName && tr.tagName.toLowerCase()==='tr')) continue;
+        const tds = tr.querySelectorAll('td');
+        const param = (tds[1]?.querySelector('textarea')?.value||'').trim();
+        const desc = (tds[2]?.querySelector('textarea')?.value||'').trim();
+        const vDiv = tds[3]?.querySelector('.gist-editor');
+        const verifHtml = vDiv ? vDiv.innerHTML : '';
+        const verifBlocks = extractGistBlocksFromHtml(verifHtml);
+        const hasVerif = verifBlocks && verifBlocks.some(b => (b.type==='table' && (b.rows||[]).length) || (b.type==='p' && (b.text||'').trim().length));
+        if(param || desc || hasVerif){
+          rows.push({ no: String(no++), param, desc, verifBlocks });
+        }
+      }
+      return rows;
+    }
+
+    $('generate').addEventListener('click', async ()=>{
+      updateDashboard();
+      const flags = $('dashboard-flags').children;
+      if(flags.length > 0){
+        const dashboard = $('dashboard-ribbon');
+        dashboard.style.display = 'block';
+        setStatus('Missing data detected. Generating anyway…');
+        showToast('warning', 'Missing data detected. Generating with incomplete data.', { duration: 5000 });
+      }
+      $('log').textContent='';
+      setStatus('Generating…');
+      genBtn.disabled = true;
+      showOverlay('Generating DAR…');
+      if(partTotalsTimer){ clearTimeout(partTotalsTimer); partTotalsTimer = null; }
+      try{ updatePart1TotalsFromParas(); }catch(_){}
+      try{
+        if(typeof JSZip === 'undefined' || typeof saveAs === 'undefined'){
+          throw new Error('Missing libraries: JSZip or FileSaver not loaded. Please ensure network access or embed local copies.');
+        }
+        // Ensure nested totals are up to date
+        recalcRevenue();
+        recalcVoluntary();
+        wireNestedAutoCalc();
+        const { zip, xml, sharedStringsXml } = await readEmbeddedTemplate();
+        const headerVals = headerValuesFromForm();
+        const paraForm = paraRowsFromForm();
+        const paraRows = paraForm.rows;
+        if(paraForm.counts.total){
+          headerVals['total paras'] = `${paraForm.counts.total} (${paraForm.counts.regular}+${paraForm.counts.minor} minor)`;
+        }
+        const riskRows = riskRowsFromForm();
+        fillTemplateXml(xml, sharedStringsXml, headerVals, paraRows, riskRows);
+        await stripProtections(zip, xml);
+        const out = await writeXmlDocx(zip, xml, sharedStringsXml);
+        const outName = 'Target-Filled.docx';
+        lastGeneratedBlob = out;
+        lastGeneratedName = outName;
+        if(downloadLastBtn) downloadLastBtn.disabled = false;
+        saveAs(out, outName);
+        setStatus('Done. Download started.');
+        showToast('success', 'DAR generated successfully.', { actionLabel: 'Download again', onAction: downloadLastOutput, duration: 6000 });
+      }catch(err){
+        console.error(err);
+        log('ERROR:', String(err?.message||err));
+        setStatus('Failed. See log.');
+        showToast('error', 'DAR generation failed. See log.');
+      }
+      finally{
+        hideOverlay();
+        genBtn.disabled = false;
+      }
+    });
+
+    // Save/Load session handlers
+    const saveBtn = $('saveSession');
+    if(saveBtn){
+      saveBtn.onclick = ()=>{
+        try{
+          const data = collectSession();
+          const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
+          saveAs(blob, 'dar-session.json');
+          setStatus('Session saved to JSON file.');
+        }catch(e){ alert('Failed to save session: ' + (e?.message||e)); }
+      };
+    }
+    const loadBtn = $('loadSessionBtn');
+    const loadFile = $('loadSessionFile');
+    if(loadBtn && loadFile){
+      loadBtn.onclick = ()=> loadFile.click();
+      loadFile.onchange = ()=>{
+        const f = loadFile.files && loadFile.files[0];
+        if(!f) return;
+        const rdr = new FileReader();
+        rdr.onload = ()=>{
+          try{
+            const data = JSON.parse(String(rdr.result||'{}'));
+            restoreSession(data);
+            setStatus('Session loaded.');
+          }catch(e){ alert('Invalid session file.'); }
+        };
+        rdr.readAsText(f);
+      };
+    }
+    if(downloadLastBtn){
+      downloadLastBtn.addEventListener('click', downloadLastOutput);
+    }
+
+    // Manual save/load session
+    if($('saveSession')) $('saveSession').addEventListener('click', () => {
+      try{
+        const data = collectSession();
+        const json = JSON.stringify(data, null, 2);
+        const blob = new Blob([json], {type: 'application/json'});
+        saveAs(blob, 'dar_session.json');
+        showToast('success', 'Session saved to file.');
+      }catch(err){
+        showToast('error', 'Failed to save session: ' + err.message);
+      }
+    });
+    if($('loadSession')) $('loadSession').addEventListener('click', () => {
+      if($('loadSessionFile')) $('loadSessionFile').click();
+    });
+    if($('loadSessionFile')) $('loadSessionFile').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if(!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try{
+          const data = JSON.parse(e.target.result);
+          restoreSession(data);
+          showToast('success', 'Session loaded from file.');
+        }catch(err){
+          showToast('error', 'Failed to load session: ' + err.message);
+        }
+      };
+      reader.readAsText(file);
+    });
+
+    initAutosave();
+  </script>
+</body>
+</html>

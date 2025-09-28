@@ -25,6 +25,11 @@
     .muted { color: #666; font-size: 12px; }
     .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
     .log { white-space: pre-wrap; background: #fbfbfb; border: 1px dashed #e5e7eb; padding: 8px; border-radius: 6px; max-height: 240px; overflow: auto; }
+    .validation-summary { border: 1px solid #b91c1c; background: #fef2f2; color: #7f1d1d; border-radius: 10px; padding: 16px; margin-bottom: 16px; box-shadow: 0 4px 10px rgba(185, 28, 28, 0.1); }
+    .validation-summary h2 { margin: 0 0 8px; font-size: 18px; }
+    .validation-summary ul { margin: 0; padding-left: 20px; }
+    .validation-summary li { margin-bottom: 6px; }
+    #auditDates.field-error, .paras-cards.field-error { box-shadow: 0 0 0 2px rgba(185, 28, 28, 0.35); border-radius: 10px; }
     .rev-bars { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 10px; margin-top: 6px; align-items: center; }
     .rev-bars .bar-row { display: contents; }
     .rev-bars .bar-lbl { font-size: 12px; color: #444; }
@@ -176,6 +181,12 @@
     <a class="nav-link" href="#dashboard-ribbon">Dashboard</a>
     <a class="nav-link" href="#section-session">Session Tools</a>
   </nav>
+
+  <section id="validationSummary" class="validation-summary" role="alert" aria-live="assertive" hidden tabindex="-1">
+    <h2>Review required fields</h2>
+    <p class="muted" style="color:#7f1d1d; margin-bottom:8px">Resolve the issues below before generating the DAR.</p>
+    <ul id="validationList"></ul>
+  </section>
 
   <div id="totalsRibbon" class="totals-ribbon" role="status" aria-live="polite">
     <div class="totals-item">
@@ -535,6 +546,246 @@
       });
     }
 
+    const ALLOWED_RICH_TAGS = new Set(['p','br','strong','em','u','b','i','a','ul','ol','li','table','thead','tbody','tr','th','td','span','div','sup','sub']);
+    const ALLOWED_RICH_ATTRS = {
+      a: ['href'],
+      td: ['colspan','rowspan'],
+      th: ['colspan','rowspan','scope'],
+      table: ['border']
+    };
+    const URI_ATTRS = new Set(['href']);
+
+    function isSafeUri(value){
+      if(!value) return false;
+      const trimmed = value.trim();
+      if(trimmed.startsWith('#')) return true;
+      return /^(https?:|mailto:)/i.test(trimmed);
+    }
+
+    function sanitizeRichText(html){
+      if(!html) return '';
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(`<div>${html}</div>`, 'text/html');
+      const container = document.createElement('div');
+      function cleanChildren(source, target){
+        for(const child of Array.from(source.childNodes)){
+          const cleaned = cleanNode(child);
+          if(!cleaned) continue;
+          if(cleaned.nodeType === Node.DOCUMENT_FRAGMENT_NODE){
+            target.appendChild(cleaned);
+          }else{
+            target.appendChild(cleaned);
+          }
+        }
+      }
+      function cleanNode(node){
+        if(!node) return null;
+        if(node.nodeType === Node.TEXT_NODE){
+          return document.createTextNode(node.textContent || '');
+        }
+        if(node.nodeType !== Node.ELEMENT_NODE){
+          return null;
+        }
+        const tag = node.tagName.toLowerCase();
+        if(!ALLOWED_RICH_TAGS.has(tag)){
+          const fragment = document.createDocumentFragment();
+          cleanChildren(node, fragment);
+          return fragment;
+        }
+        const el = tag === 'br' ? document.createElement('br') : document.createElement(tag);
+        if(tag !== 'br'){
+          const attrs = ALLOWED_RICH_ATTRS[tag] || [];
+          attrs.forEach(attr => {
+            if(!node.hasAttribute(attr)) return;
+            let value = node.getAttribute(attr);
+            if(URI_ATTRS.has(attr) && !isSafeUri(value)) return;
+            if(attr === 'colspan' || attr === 'rowspan'){
+              const numeric = String(value || '').replace(/[^0-9]/g,'');
+              if(!numeric) return;
+              value = String(parseInt(numeric, 10));
+            }else if(attr === 'border'){
+              const numeric = String(value || '').replace(/[^0-9]/g,'');
+              value = numeric ? String(parseInt(numeric, 10)) : '0';
+            }
+            if(value != null && value !== ''){ el.setAttribute(attr, value); }
+          });
+          cleanChildren(node, el);
+        }
+        return el;
+      }
+      cleanChildren(doc.body, container);
+      return container.innerHTML;
+    }
+
+    function setRichTextContent(el, html){
+      if(!el) return;
+      const safe = sanitizeRichText(html);
+      el.innerHTML = safe;
+    }
+
+    function getSanitizedHtml(el){
+      if(!el) return '';
+      const safe = sanitizeRichText(el.innerHTML);
+      if(el.innerHTML !== safe){
+        el.innerHTML = safe;
+      }
+      return safe;
+    }
+
+    function ensureCaret(root){
+      if(!root) return;
+      const existingSelection = window.getSelection();
+      if(existingSelection && existingSelection.rangeCount > 0){
+        const activeRange = existingSelection.getRangeAt(0);
+        if(root.contains(activeRange.commonAncestorContainer)) return;
+      }
+      const range = document.createRange();
+      range.selectNodeContents(root);
+      range.collapse(false);
+      const sel = window.getSelection();
+      if(!sel) return;
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+
+    function insertHtmlAtCaret(html, root){
+      if(!root) return;
+      ensureCaret(root);
+      const selection = window.getSelection();
+      if(!selection || selection.rangeCount === 0) return;
+      const range = selection.getRangeAt(0);
+      range.deleteContents();
+      const temp = document.createElement('div');
+      temp.innerHTML = html;
+      const fragment = document.createDocumentFragment();
+      while(temp.firstChild){ fragment.appendChild(temp.firstChild); }
+      range.insertNode(fragment);
+      range.collapse(false);
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
+
+    function escapeHtml(str){
+      return String(str).replace(/[&<>"']/g, ch => {
+        switch(ch){
+          case '&': return '&amp;';
+          case '<': return '&lt;';
+          case '>': return '&gt;';
+          case '"': return '&quot;';
+          case "'": return '&#39;';
+          default: return ch;
+        }
+      });
+    }
+
+    function insertPlainTextAtCaret(text, root){
+      const normalized = String(text || '').replace(/\r\n/g, '\n');
+      const html = normalized.split('\n').map(line => escapeHtml(line)).join('<br>');
+      insertHtmlAtCaret(html, root);
+    }
+
+    function handleRichTextPaste(event){
+      try{
+        const target = event.currentTarget;
+        const html = event.clipboardData?.getData('text/html');
+        const text = event.clipboardData?.getData('text/plain');
+        if(html){
+          event.preventDefault();
+          insertHtmlAtCaret(sanitizeRichText(html), target);
+        }else if(text){
+          event.preventDefault();
+          insertPlainTextAtCaret(text, target);
+        }
+      }catch(err){
+        console.warn('Paste handling failed:', err);
+      }
+    }
+
+    function setValidationSummary(errors){
+      const summary = $('validationSummary');
+      const list = $('validationList');
+      if(!summary || !list) return;
+      list.innerHTML = '';
+      if(!errors || !errors.length){
+        summary.hidden = true;
+        summary.setAttribute('aria-hidden','true');
+        return;
+      }
+      errors.forEach(msg => {
+        const li = document.createElement('li');
+        li.textContent = msg;
+        list.appendChild(li);
+      });
+      summary.hidden = false;
+      summary.setAttribute('aria-hidden','false');
+    }
+
+    function validateFormBeforeGenerate(){
+      clearFieldHighlights();
+      const errors = [];
+      const invalidNodes = [];
+      const requiredFields = [
+        { id: 'f_name', label: 'Name of Unit' },
+        { id: 'f_gstin', label: 'Registration Number' },
+        { id: 'f_division', label: 'Commissionerate/Division/Range' },
+        { id: 'f_period', label: 'Period Covered' },
+        { id: 'f_ar', label: 'A.R. Number' }
+      ];
+      requiredFields.forEach(({ id, label }) => {
+        const field = $(id);
+        if(!field) return;
+        if(!String(field.value || '').trim()){
+          errors.push(`${label} is required.`);
+          invalidNodes.push(field);
+        }
+      });
+      if(!auditDates.length){
+        const dateContainer = $('auditDates');
+        const dateField = $('f_audit_date_input');
+        errors.push('Add at least one audit visit date.');
+        if(dateContainer) invalidNodes.push(dateContainer);
+        if(dateField) invalidNodes.push(dateField);
+      }
+      const cards = Array.from(parasContainer.children).filter(node => node.classList && node.classList.contains('para-card'));
+      if(!cards.length){
+        errors.push('Add at least one para (major or minor) before generating.');
+        const container = $('paras-container');
+        if(container) invalidNodes.push(container);
+      }else{
+        let missingGistCount = 0;
+        for(const card of cards){
+          const gistEl = card.querySelector('[data-role="gist"]');
+          const sanitizedHtml = gistEl ? getSanitizedHtml(gistEl) : '';
+          const text = sanitizedHtml.replace(/<[^>]*>/g,'').trim();
+          if(!text){
+            missingGistCount++;
+            if(invalidNodes.length < 25 && gistEl) invalidNodes.push(gistEl);
+            if(missingGistCount <= 3){
+              const sl = card.querySelector('.para-sl-no')?.textContent || String(missingGistCount);
+              errors.push(`Para ${sl} is missing a gist/objection summary.`);
+            }
+          }
+        }
+        if(missingGistCount > 3){
+          errors.push(`Additional ${missingGistCount - 3} para(s) also require gist text.`);
+        }
+      }
+      if(errors.length){
+        applyFieldHighlights(invalidNodes);
+        setValidationSummary(errors);
+        const summary = $('validationSummary');
+        if(summary){
+          summary.focus({ preventScroll: false });
+          summary.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        showToast('error', 'Please resolve the highlighted issues before generating.');
+        return false;
+      }
+      clearFieldHighlights();
+      setValidationSummary([]);
+      return true;
+    }
+
     const AUTOSAVE_KEY = 'dar_form_autosaves_v1';
     const AUTOSAVE_LIMIT = 10;
     let autosaves = [];
@@ -775,7 +1026,9 @@
 
     function getGistSummary(gist){
       if(!gist) return 'No gist entered';
-      const text = gist.replace(/<[^>]*>/g, '').trim();
+      const tmp = document.createElement('div');
+      tmp.innerHTML = sanitizeRichText(gist);
+      const text = tmp.textContent.trim();
       return text.length > 50 ? text.substring(0, 50) + '...' : text || 'No gist entered';
     }
 
@@ -1068,27 +1321,12 @@
       gistDiv.setAttribute('data-placeholder','Paste text or tables here');
       gistDiv.title = 'Describe the objection (rich text/table supported)';
       if(obj.gist){
-        if(/<\w+[^>]*>/.test(obj.gist)){
-          gistDiv.innerHTML = obj.gist;
-        }else{
-          gistDiv.textContent = String(obj.gist);
-        }
+        setRichTextContent(gistDiv, obj.gist);
       }
-      gistDiv.addEventListener('paste', (e)=>{
-        try{
-          const html = e.clipboardData?.getData('text/html');
-          const text = e.clipboardData?.getData('text/plain');
-          if(html){
-            e.preventDefault();
-            document.execCommand('insertHTML', false, html);
-          }else if(text){
-            e.preventDefault();
-            document.execCommand('insertText', false, text);
-          }
-        }catch(err){ /* ignore */ }
-      });
+      gistDiv.addEventListener('paste', handleRichTextPaste);
       gistDiv.addEventListener('input', () => {
-        gistSummary.textContent = getGistSummary(gistDiv.innerHTML || gistDiv.textContent);
+        const safeHtml = getSanitizedHtml(gistDiv);
+        gistSummary.textContent = getGistSummary(safeHtml || gistDiv.textContent);
         updateParaSummary(card);
       });
       content.appendChild(createField('Gist of objection', gistDiv));
@@ -1727,15 +1965,8 @@
       div.className = 'gist-editor';
       div.contentEditable = 'true';
       div.setAttribute('data-placeholder','Paste verification text or tables here');
-      if(obj.verifHtml){ div.innerHTML = obj.verifHtml; }
-      div.addEventListener('paste', (e)=>{
-        try{
-          const html = e.clipboardData?.getData('text/html');
-          const text = e.clipboardData?.getData('text/plain');
-          if(html){ e.preventDefault(); document.execCommand('insertHTML', false, html); }
-          else if(text){ e.preventDefault(); document.execCommand('insertText', false, text); }
-        }catch(err){ }
-      });
+      if(obj.verifHtml){ setRichTextContent(div, obj.verifHtml); }
+      div.addEventListener('paste', handleRichTextPaste);
       tdV.appendChild(div); tr.appendChild(tdV);
       // Action (Delete row)
       const tdA = document.createElement('td');
@@ -1905,7 +2136,7 @@
     function gistHtmlToText(html){
       if(!html) return '';
       const tmp = document.createElement('div');
-      tmp.innerHTML = html;
+      tmp.innerHTML = sanitizeRichText(html);
       const tables = tmp.querySelectorAll('table');
       let parts = [];
       if(tables.length){
@@ -1932,7 +2163,7 @@
       const blocks = [];
       if(!html) return blocks;
       const root = document.createElement('div');
-      root.innerHTML = html;
+      root.innerHTML = sanitizeRichText(html);
       function addParagraph(text){
         const t = (text||'').replace(/\u00A0/g,' ').trim();
         if(t) blocks.push({ type:'p', text:t });
@@ -2053,7 +2284,7 @@
         const no = card.querySelector('.para-sl-no')?.textContent || '';
         // gist: capture as structured blocks (paragraphs + tables)
         const gistDiv = card.querySelector('.gist-editor');
-        const gistHtml = gistDiv ? gistDiv.innerHTML : '';
+        const gistHtml = gistDiv ? getSanitizedHtml(gistDiv) : '';
         const gistBlocks = extractGistBlocksFromHtml(gistHtml);
         const isMinor = card.dataset.minor === '1';
         let revText = '';
@@ -2096,7 +2327,7 @@
         risks.push({
           param: tds[1]?.querySelector('textarea')?.value || '',
           desc: tds[2]?.querySelector('textarea')?.value || '',
-          verifHtml: verDiv ? verDiv.innerHTML : ''
+          verifHtml: verDiv ? getSanitizedHtml(verDiv) : ''
         });
       }
       return { version: 1, fields, totals, paras, risks };
@@ -2311,7 +2542,7 @@
         for(const p of (data.paras||[])){
           const obj = {
             no: p.no,
-            gist: p.gistHtml || '',
+            gist: sanitizeRichText(p.gistHtml || ''),
             rev: p.rev || p.revLegacy || '',
             revStructured: p.revStructured || p.revMajor || null,
             agree: p.agree||'', audit: p.audit||''
@@ -2321,7 +2552,7 @@
         // Risks
         rtbody.innerHTML = '';
         for(const r of (data.risks||[])){
-          addRiskRow({ param:r.param||'', desc:r.desc||'', verifHtml:r.verifHtml||'' });
+          addRiskRow({ param:r.param||'', desc:r.desc||'', verifHtml: sanitizeRichText(r.verifHtml||'') });
         }
         renumberParas();
       }catch(e){ alert('Failed to load session: ' + (e?.message||e)); }
@@ -2335,7 +2566,7 @@
         const no = card.querySelector('.para-sl-no')?.textContent || '';
         // gist: capture as structured blocks (paragraphs + tables)
         const gistDiv = card.querySelector('[data-role="gist"]');
-        const gistHtml = gistDiv ? gistDiv.innerHTML : '';
+        const gistHtml = gistDiv ? getSanitizedHtml(gistDiv) : '';
         const gistBlocks = extractGistBlocksFromHtml(gistHtml);
         const isMinor = card.dataset.minor === '1';
         let revText = '';
@@ -2924,7 +3155,7 @@
         const param = (tds[1]?.querySelector('textarea')?.value||'').trim();
         const desc = (tds[2]?.querySelector('textarea')?.value||'').trim();
         const vDiv = tds[3]?.querySelector('.gist-editor');
-        const verifHtml = vDiv ? vDiv.innerHTML : '';
+        const verifHtml = vDiv ? getSanitizedHtml(vDiv) : '';
         const verifBlocks = extractGistBlocksFromHtml(verifHtml);
         const hasVerif = verifBlocks && verifBlocks.some(b => (b.type==='table' && (b.rows||[]).length) || (b.type==='p' && (b.text||'').trim().length));
         if(param || desc || hasVerif){
@@ -2935,6 +3166,9 @@
     }
 
     $('generate').addEventListener('click', async ()=>{
+      if(!validateFormBeforeGenerate()){
+        return;
+      }
       updateDashboard();
       const flags = $('dashboard-flags').children;
       if(flags.length > 0){

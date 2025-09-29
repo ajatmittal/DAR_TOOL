@@ -189,7 +189,7 @@
 <body>
   <h1>
     DAR Generator for CGST Audit Thane
-    <div class="muted" style="font-size:14px">(Fill all Part-I fields; A.R. No. is optional)</div>
+    <div class="muted" style="font-size:14px">(Fill all Part-I fields — A.R. No. is optional)</div>
   </h1>
 
   <nav class="sticky-nav" aria-label="Section navigation">
@@ -309,7 +309,8 @@
           <input id="f_audit_dates" type="hidden" />
         </div>
       </div>
-      <div><label>A.R. No.</label><input id="f_ar" type="text" /></div>
+      <!-- The A.R. No. field is intentionally optional; do not add required attributes. -->
+      <div><label>A.R. No. <span class="muted">Optional</span></label><input id="f_ar" type="text" /></div>
       <div><label>MCM Date <span class="required-indicator">Required</span></label><input id="f_mcm" type="date" required aria-required="true" /></div>
       <!-- Rows 15 and 16 are captured in dedicated nested tables below -->
     </div>
@@ -568,6 +569,7 @@
     const log = (...a) => { const s=a.join(' '); console.log(s); $('log').textContent += s+'\n'; };
     const setStatus = s => $('status').textContent = s;
 
+    const auditDates = [];
     const REQUIRED_FIELDS = [
       { id: 'f_name', label: 'Name of Unit' },
       { id: 'f_gstin', label: 'Registration Number' },
@@ -581,9 +583,15 @@
       { id: 'f_address', label: 'Address' },
       { id: 'f_circle', label: 'Circle' },
       { id: 'f_group', label: 'Group' },
-      { id: 'f_officers', label: 'Circle, Group and Officers' }
+      { id: 'f_officers', label: 'Circle, Group and Officers' },
+      {
+        id: 'f_audit_dates',
+        label: 'Audit visit dates',
+        message: 'Add at least one audit visit date.',
+        isValid: () => auditDates.length > 0,
+        highlightTargets: ['auditDates', 'f_audit_date_input']
+      }
     ];
-    const PRECHECK_BLOCKERS = ['unit', 'audit', 'paras', 'gist'];
     const PREFLIGHT_LABELS = {
       unit: 'Part-I details',
       audit: 'Audit visit dates',
@@ -591,10 +599,50 @@
       gist: 'Gist summaries',
       revenue: 'Revenue data review'
     };
-    let preflightSnapshot = { blockers: PRECHECK_BLOCKERS.length, revenueMissing: 0, gistMissing: 0, cardCount: 0 };
+    const NON_BLOCKING_PREFLIGHT_KEYS = new Set(['revenue']);
+    const PRECHECK_BLOCKERS = Object.keys(PREFLIGHT_LABELS).filter(key => !NON_BLOCKING_PREFLIGHT_KEYS.has(key));
+    let preflightSnapshot = { blockers: 0, revenueMissing: 0, gistMissing: 0, cardCount: 0 };
+    const toastTimers = new WeakMap();
+
+    function isRequiredFieldComplete(entry, fieldOverride){
+      const field = fieldOverride || $(entry.id);
+      if(!field) return false;
+      const raw = String(field.value || '').trim();
+      if(typeof entry.isValid === 'function'){
+        try{ return !!entry.isValid(raw, field); }
+        catch(err){ console.warn('Required field validation failed for', entry.id, err); return false; }
+      }
+      return !!raw;
+    }
+
+    function resolveHighlightTargets(entry, fieldOverride){
+      const field = fieldOverride || $(entry.id);
+      const targets = [];
+      if(entry.highlightTargets){
+        const list = Array.isArray(entry.highlightTargets) ? entry.highlightTargets : [entry.highlightTargets];
+        list.forEach(target => {
+          if(typeof target === 'function'){
+            const result = target(field);
+            if(Array.isArray(result)){
+              result.forEach(node => { if(node) targets.push(node); });
+            }else if(result){ targets.push(result); }
+          }else if(typeof target === 'string'){
+            const node = $(target);
+            if(node) targets.push(node);
+          }else if(target){
+            targets.push(target);
+          }
+        });
+      }
+      if(!targets.length && field){
+        targets.push(field);
+      }
+      return targets;
+    }
 
     const genBtn = $('generate');
     const downloadLastBtn = $('downloadLast');
+    if(genBtn) genBtn.disabled = false;
     if(downloadLastBtn) downloadLastBtn.disabled = true;
     // Attach numeric/NQ restrictions and auto-calc listeners immediately
     try{ wireNestedAutoCalc(); recalcRevenue(); recalcVoluntary(); wireAuditDates(); wireParaGroupToggles(); applyGroupVisibility(); updatePart1TotalsFromParas(); }catch(e){}
@@ -613,7 +661,6 @@
     });
 
     // Date helpers (dd-mm-yyyy)
-    const auditDates = [];
     let draggedCard = null;
     let showMajorParas = true;
     let showMinorParas = true;
@@ -897,10 +944,7 @@
         if(cardHasRevenueContent(card)) revenuePresent++;
         else revenueMissing++;
       });
-      const requiredComplete = REQUIRED_FIELDS.every(({ id }) => {
-        const field = $(id);
-        return field && String(field.value || '').trim();
-      });
+      const requiredComplete = REQUIRED_FIELDS.every(entry => isRequiredFieldComplete(entry));
       const auditComplete = auditDates.length > 0;
       const hasParas = cards.length > 0;
       const gistState = !hasParas ? 'pending' : (gistMissing === 0 ? 'complete' : 'attention');
@@ -938,21 +982,15 @@
       clearFieldHighlights();
       const errors = [];
       const invalidNodes = [];
-      REQUIRED_FIELDS.forEach(({ id, label }) => {
-        const field = $(id);
+      REQUIRED_FIELDS.forEach(entry => {
+        const field = $(entry.id);
         if(!field) return;
-        if(!String(field.value || '').trim()){
-          errors.push(`${label} is required.`);
-          invalidNodes.push(field);
-        }
+        if(isRequiredFieldComplete(entry, field)) return;
+        errors.push(entry.message || `${entry.label} is required.`);
+        resolveHighlightTargets(entry, field).forEach(node => {
+          if(node) invalidNodes.push(node);
+        });
       });
-      if(!auditDates.length){
-        const dateContainer = $('auditDates');
-        const dateField = $('f_audit_date_input');
-        errors.push('Add at least one audit visit date.');
-        if(dateContainer) invalidNodes.push(dateContainer);
-        if(dateField) invalidNodes.push(dateField);
-      }
       const cards = Array.from(parasContainer.children).filter(node => node.classList && node.classList.contains('para-card'));
       if(!cards.length){
         errors.push('Add at least one para (major or minor) before generating.');
@@ -1073,10 +1111,13 @@
       const text = document.createElement('div');
       text.textContent = message;
       toast.appendChild(text);
-      let timer = null;
       const dismiss = ()=>{
         toast.classList.remove('show');
-        if(timer){ clearTimeout(timer); timer = null; }
+        const timerId = toastTimers.get(toast);
+        if(timerId){
+          clearTimeout(timerId);
+          toastTimers.delete(toast);
+        }
         setTimeout(()=>{ if(toast.parentNode) toast.parentNode.removeChild(toast); }, 300);
       };
       if(opts && opts.actionLabel && typeof opts.onAction === 'function'){
@@ -1098,7 +1139,12 @@
       container.appendChild(toast);
       requestAnimationFrame(()=> toast.classList.add('show'));
       const duration = typeof opts.duration === 'number' ? opts.duration : 5000;
-      if(duration > 0){ timer = setTimeout(dismiss, duration); }
+      if(duration > 0){
+        const timerId = setTimeout(dismiss, duration);
+        toastTimers.set(toast, timerId);
+      }else{
+        toastTimers.delete(toast);
+      }
       if((opts && opts.focus) || type === 'error'){
         setTimeout(()=>{ try{ toast.focus({ preventScroll: true }); }catch(_){} }, 60);
       }

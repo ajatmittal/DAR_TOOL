@@ -182,7 +182,6 @@
     .dashboard-flags .flag { background: #fef2f2; color: #b91c1c; padding: 8px; border-radius: 6px; margin-bottom: 8px; font-size: 14px; }
     .dashboard-flags .flag:last-child { margin-bottom: 0; }
   </style>
-  </style>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
 </head>
@@ -324,7 +323,7 @@
         <div class="circle-field">
           <label for="f_circle" class="sub-label">Circle <span class="required-indicator">Required</span></label>
           <select id="f_circle" required aria-required="true">
-            <option value="">Select Circle</option>
+            <option value="" disabled selected data-placeholder="true">Select Circle</option>
             <option value="I">I</option>
             <option value="II">II</option>
             <option value="III">III</option>
@@ -340,7 +339,7 @@
         <div class="circle-field">
           <label for="f_group" class="sub-label">Group <span class="required-indicator">Required</span></label>
           <select id="f_group" required aria-required="true">
-            <option value="">Select Group</option>
+            <option value="" disabled selected data-placeholder="true">Select Group</option>
             <option value="1">1</option>
             <option value="2">2</option>
             <option value="3">3</option>
@@ -607,12 +606,39 @@
     function isRequiredFieldComplete(entry, fieldOverride){
       const field = fieldOverride || $(entry.id);
       if(!field) return false;
-      const raw = String(field.value || '').trim();
+      const tagName = field.tagName ? field.tagName.toLowerCase() : '';
+      const rawValue = field.value;
+      const rawString = rawValue == null ? '' : String(rawValue);
+      const trimmed = rawString.trim();
       if(typeof entry.isValid === 'function'){
-        try{ return !!entry.isValid(raw, field); }
+        try{ return !!entry.isValid(rawString, field); }
         catch(err){ console.warn('Required field validation failed for', entry.id, err); return false; }
       }
-      return !!raw;
+      if(Array.isArray(entry.invalidValues) && entry.invalidValues.length){
+        const invalid = entry.invalidValues.some(value => {
+          const stringValue = value == null ? '' : String(value);
+          return stringValue === rawString || stringValue === trimmed;
+        });
+        if(invalid) return false;
+      }
+      if(tagName === 'select'){
+        const selectedIndex = field.selectedIndex;
+        const selected = typeof selectedIndex === 'number' && field.options ? field.options[selectedIndex] : null;
+        if(!selected) return false;
+        if(selected.disabled || selected.dataset?.placeholder === 'true') return false;
+        const normalized = trimmed.toLowerCase();
+        if(!normalized || normalized === 'default') return false;
+        if(
+          normalized === '0' &&
+          entry.allowZero !== true &&
+          field.dataset?.allowZero !== 'true' &&
+          selected.dataset?.allowZero !== 'true'
+        ){
+          return false;
+        }
+      }
+      if(trimmed.length > 0) return true;
+      return rawValue != null && rawValue !== '';
     }
 
     function resolveHighlightTargets(entry, fieldOverride){
@@ -932,8 +958,7 @@
       return `${initial.join(', ')} and ${last}`;
     }
 
-    function updatePreflightChecklist(){
-      const statusEl = $('preflightStatus');
+    function collectPreflightChecklistState(){
       const container = document.getElementById('paras-container');
       const cards = container ? Array.from(container.children).filter(node => node.classList && node.classList.contains('para-card')) : [];
       let gistMissing = 0;
@@ -956,22 +981,34 @@
         gist: { state: gistState, detail: gistMissing > 0 ? `${gistMissing} para${gistMissing === 1 ? '' : 's'} still need gist text.` : '' },
         revenue: { state: revenueState, detail: revenueMissing > 0 ? `${revenueMissing} para${revenueMissing === 1 ? '' : 's'} missing revenue figures will show ₹0 in exports.` : (revenueState === 'complete' ? 'All detection and recovery totals captured.' : '') }
       };
-      Object.entries(states).forEach(([key, { state, detail }]) => setPreflightItemState(key, state, detail));
       const blockingIncomplete = PRECHECK_BLOCKERS.filter(key => states[key].state !== 'complete');
-      preflightSnapshot = {
-        blockers: blockingIncomplete.length,
-        revenueMissing,
-        gistMissing,
-        cardCount: cards.length
+      return { cards, states, blockingIncomplete, gistMissing, revenueMissing };
+    }
+
+    function summarizePreflightSnapshot(state){
+      return {
+        blockers: state.blockingIncomplete.length,
+        revenueMissing: state.revenueMissing,
+        gistMissing: state.gistMissing,
+        cardCount: state.cards.length
       };
+    }
+
+    preflightSnapshot = summarizePreflightSnapshot(collectPreflightChecklistState());
+
+    function updatePreflightChecklist(){
+      const statusEl = $('preflightStatus');
+      const state = collectPreflightChecklistState();
+      Object.entries(state.states).forEach(([key, { state: itemState, detail }]) => setPreflightItemState(key, itemState, detail));
+      preflightSnapshot = summarizePreflightSnapshot(state);
       if(statusEl){
-        if(blockingIncomplete.length === 0){
+        if(state.blockingIncomplete.length === 0){
           statusEl.dataset.state = 'ready';
           statusEl.textContent = 'Ready to generate – all critical checks passed.';
         }else{
-          const completed = PRECHECK_BLOCKERS.length - blockingIncomplete.length;
+          const completed = PRECHECK_BLOCKERS.length - state.blockingIncomplete.length;
           statusEl.dataset.state = 'blocked';
-          const outstanding = formatOutstandingList(blockingIncomplete);
+          const outstanding = formatOutstandingList(state.blockingIncomplete);
           statusEl.textContent = `${completed} of ${PRECHECK_BLOCKERS.length} critical items complete – ${outstanding} pending.`;
         }
       }

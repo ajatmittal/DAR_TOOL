@@ -250,9 +250,20 @@
         </div>
       </div>
       <div class="field-wrapper" data-field-wrapper="f_category">
-        <label for="f_category">Category <span class="required-indicator" aria-hidden="true">*</span></label>
+        <label for="f_category_select">Category <span class="required-indicator" aria-hidden="true">*</span></label>
         <div class="field-control">
-          <input id="f_category" type="text" required aria-required="true" />
+          <div class="row" style="flex-wrap:wrap; gap:8px; align-items:center;">
+            <select id="f_category_select" aria-required="true" style="min-width:160px;">
+              <option value="" disabled selected>Select Category</option>
+              <option value="Trader">Trader</option>
+              <option value="Manufacturer">Manufacturer</option>
+              <option value="Service Provider">Service Provider</option>
+              <option value="ISD">ISD</option>
+              <option value="Other">Other</option>
+            </select>
+            <input id="f_category_other" type="text" placeholder="Specify other category" style="display:none; flex:1; min-width:200px;" />
+          </div>
+          <input id="f_category" type="hidden" />
           <span class="field-tick" aria-hidden="true">✓</span>
         </div>
       </div>
@@ -269,7 +280,7 @@
         </div>
       </div>
       <div class="field-wrapper" data-field-wrapper="f_product">
-        <label for="f_product">Goods/Services supplied <span class="required-indicator" aria-hidden="true">*</span></label>
+        <label for="f_product">Description of Goods/Services Supplied <span class="required-indicator" aria-hidden="true">*</span></label>
         <div class="field-control">
           <input id="f_product" type="text" required aria-required="true" />
           <span class="field-tick" aria-hidden="true">✓</span>
@@ -283,9 +294,18 @@
         </div>
       </div>
       <div class="field-wrapper" data-field-wrapper="f_period">
-        <label for="f_period">Period Covered <span class="required-indicator" aria-hidden="true">*</span></label>
+        <label for="f_period_start">Period Covered <span class="required-indicator" aria-hidden="true">*</span></label>
         <div class="field-control">
-          <input id="f_period" type="text" required aria-required="true" />
+          <div class="row" style="flex-wrap:wrap; gap:8px; align-items:center;">
+            <select id="f_period_start" style="min-width:160px;">
+              <option value="" disabled selected>From (FY)</option>
+            </select>
+            <span class="muted" aria-hidden="true">to</span>
+            <select id="f_period_end" style="min-width:160px;">
+              <option value="" disabled selected>To (FY)</option>
+            </select>
+          </div>
+          <input id="f_period" type="hidden" />
           <span class="field-tick" aria-hidden="true">✓</span>
         </div>
       </div>
@@ -395,7 +415,8 @@
 
   <div class="card" id="section-detection">
     <h3>Part-1 Detection and Recovery</h3>
-    <div class="muted" style="margin-bottom:8px">Exact match of nested tables inside Table 1 rows 15 and 16 in Target.docx</div>
+    <div class="muted" style="margin-bottom:4px">Exact match of nested tables inside Table 1 rows 15 and 16 in Target.docx</div>
+    <div class="muted" style="margin-bottom:8px">This section auto-updates from detection and recovery figures entered in the SUMMARY OF AUDIT RESULTS.</div>
     <div class="grid" style="grid-template-columns: 1fr 1fr; gap:16px">
       <div>
         <label>Total Revenue Detection (Rs.)</label>
@@ -435,7 +456,7 @@
     <div class="row" style="justify-content: space-between;">
       <h3 style="margin:0">SUMMARY OF AUDIT RESULTS</h3>
     </div>
-    <div class="muted" style="margin-bottom:8px">Columns: Sl.No., Gist of objection, Revenue implication (if any), Assessee/Taxable Person agreement (Yes/No + reasons if No), Auditors Comments, conclusion and Proposal</div>
+    <div class="muted" style="margin-bottom:8px">Columns: Sl.No., Gist of objection, Revenue implication (if any), Assessee/Taxable Person agreement (status + remarks), Auditors Comments, conclusion and Proposal</div>
     <div class="row" style="justify-content: space-between; align-items:center; margin-bottom:8px; gap:12px;">
       <div class="row" style="gap:14px; flex-wrap: wrap;">
         <label class="toggle-group"><input type="checkbox" id="toggleMajor" checked /> Major Paras</label>
@@ -593,7 +614,7 @@
       { id: 'f_division', label: 'Commissionerate/Division/Range' },
       { id: 'f_category', label: 'Category' },
       { id: 'f_type', label: 'Type' },
-      { id: 'f_product', label: 'Goods/Services supplied' },
+      { id: 'f_product', label: 'Description of Goods/Services Supplied' },
       { id: 'f_tariff', label: 'Tariff Item (HSN/SAC)' },
       { id: 'f_period', label: 'Period Covered' },
       { id: 'f_mcm', label: 'MCM Date' },
@@ -636,7 +657,18 @@
     // Preloaded template; download link stays disabled until a file is generated
     if(downloadLastBtn) downloadLastBtn.disabled = true;
     // Attach numeric/NQ restrictions and auto-calc listeners immediately
-    try{ wireNestedAutoCalc(); recalcRevenue(); recalcVoluntary(); wireAuditDates(); wireParaGroupToggles(); applyGroupVisibility(); updatePart1TotalsFromParas(); }catch(e){}
+    try{
+      wireNestedAutoCalc();
+      recalcRevenue();
+      recalcVoluntary();
+      wireAuditDates();
+      wireCategoryField();
+      wirePeriodField();
+      wireIssuingCircleSync();
+      wireParaGroupToggles();
+      applyGroupVisibility();
+      updatePart1TotalsFromParas();
+    }catch(e){}
 
     document.querySelectorAll('.sticky-nav .nav-link').forEach(link => {
       link.addEventListener('click', evt => {
@@ -1002,6 +1034,12 @@
       renderAutosaveInfo();
     }
 
+    function getValidationFocusNode(id){
+      if(id === 'f_category'){ return $('f_category_select') || $('f_category_other'); }
+      if(id === 'f_period'){ return $('f_period_end') || $('f_period_start'); }
+      return $(id);
+    }
+
     function validateFormBeforeGenerate(){
       clearFieldHighlights();
       const errors = [];
@@ -1011,7 +1049,12 @@
         if(!field) return;
         if(!String(field.value || '').trim()){
           errors.push(`${label} is required.`);
-          invalidNodes.push(field);
+          const focusNode = getValidationFocusNode(id) || field;
+          if(focusNode) invalidNodes.push(focusNode);
+          if(id === 'f_category' || id === 'f_period'){
+            const wrapper = document.querySelector(`[data-field-wrapper="${id}"]`);
+            if(wrapper) invalidNodes.push(wrapper);
+          }
         }
       });
       if(!auditDates.length){
@@ -1202,6 +1245,21 @@
       return '₹' + formatIndianNumberString(String(numVal));
     }
 
+    function formatAgreementSummary(status, notes){
+      const trimmedStatus = (status || '').trim();
+      const trimmedNotes = (notes || '').trim();
+      if(trimmedStatus && trimmedNotes) return `${trimmedStatus} — ${trimmedNotes}`;
+      return trimmedStatus || trimmedNotes || '';
+    }
+
+    function readAgreementFromCard(card){
+      if(!card) return { status: '', notes: '', display: '' };
+      const status = card.querySelector('[data-role="agree-status"]')?.value || '';
+      const rawNotes = card.querySelector('[data-role="agree-notes"]')?.value;
+      const notes = rawNotes ? rawNotes.trim() : '';
+      return { status, notes, display: formatAgreementSummary(status, notes) };
+    }
+
     function formatIndianInput(el){
       if(!el) return;
       const val = el.value;
@@ -1268,6 +1326,218 @@
         input.addEventListener('input', clearError);
         input.addEventListener('change', clearError);
       }
+    }
+
+    function updateCategoryHidden(){
+      const select = $('f_category_select');
+      const other = $('f_category_other');
+      const hidden = $('f_category');
+      if(!hidden) return;
+      const isOther = select?.value === 'Other';
+      if(other){
+        other.style.display = isOther ? 'block' : 'none';
+        other.disabled = !isOther;
+      }
+      let finalVal = '';
+      if(isOther && other){
+        finalVal = (other.value || '').trim();
+      }else if(select){
+        finalVal = select.value || '';
+      }
+      hidden.value = finalVal;
+      updateFieldCompletionStateById('f_category');
+    }
+
+    function wireCategoryField(){
+      const select = $('f_category_select');
+      const other = $('f_category_other');
+      if(select){
+        select.addEventListener('change', ()=>{
+          updateCategoryHidden();
+          updatePreflightChecklist();
+          if(select.value === 'Other' && other){ other.focus(); }
+        });
+      }
+      if(other){
+        other.addEventListener('input', ()=>{
+          const selectEl = $('f_category_select');
+          if(selectEl && selectEl.value !== 'Other'){ selectEl.value = 'Other'; }
+          updateCategoryHidden();
+          updatePreflightChecklist();
+        });
+      }
+      updateCategoryHidden();
+    }
+
+    function setCategoryValue(value){
+      const select = $('f_category_select');
+      const other = $('f_category_other');
+      const trimmed = (value || '').trim();
+      if(select){
+        const matchesPreset = Array.from(select.options || []).some(opt => opt.value === trimmed && opt.value !== 'Other');
+        if(trimmed && matchesPreset){
+          select.value = trimmed;
+        }else if(trimmed){
+          select.value = 'Other';
+          if(other){ other.value = trimmed; }
+        }else{
+          select.value = '';
+          if(other){ other.value = ''; }
+        }
+      }
+      updateCategoryHidden();
+      updatePreflightChecklist();
+    }
+
+    function fyOrder(label){
+      const match = /^\s*(\d{4})/.exec(label || '');
+      return match ? parseInt(match[1], 10) : 0;
+    }
+
+    function ensureFinancialYearOption(select, label){
+      if(!select || !label) return;
+      const exists = Array.from(select.options || []).some(opt => opt.value === label);
+      if(!exists){
+        const opt = document.createElement('option');
+        opt.value = label;
+        opt.textContent = label;
+        select.appendChild(opt);
+      }
+    }
+
+    function populatePeriodDropdowns(){
+      const startSelect = $('f_period_start');
+      const endSelect = $('f_period_end');
+      if(!startSelect || !endSelect) return;
+      const baseYear = 2017;
+      const currentYear = new Date().getFullYear();
+      const endYear = currentYear + 1;
+      for(let year = baseYear; year <= endYear; year++){
+        const next = String(year + 1).slice(-2);
+        const label = `${year}-${next}`;
+        ensureFinancialYearOption(startSelect, label);
+        ensureFinancialYearOption(endSelect, label);
+      }
+    }
+
+    function updatePeriodEndOptions(){
+      const startSelect = $('f_period_start');
+      const endSelect = $('f_period_end');
+      if(!startSelect || !endSelect) return;
+      const startVal = startSelect.value;
+      const minOrder = fyOrder(startVal);
+      Array.from(endSelect.options || []).forEach((opt, idx) => {
+        if(idx === 0) return;
+        const order = fyOrder(opt.value);
+        opt.disabled = !!startVal && order < minOrder;
+      });
+      if(startVal && endSelect.value){
+        const endOrder = fyOrder(endSelect.value);
+        if(endOrder < minOrder){
+          endSelect.value = '';
+        }
+      }
+    }
+
+    function updatePeriodHidden(){
+      const startSelect = $('f_period_start');
+      const endSelect = $('f_period_end');
+      const hidden = $('f_period');
+      if(!hidden) return;
+      const startVal = startSelect?.value || '';
+      const endVal = endSelect?.value || '';
+      let finalVal = '';
+      if(startVal && endVal){
+        finalVal = startVal === endVal ? startVal : `${startVal} to ${endVal}`;
+      }
+      hidden.value = finalVal;
+      updateFieldCompletionStateById('f_period');
+      updatePreflightChecklist();
+    }
+
+    function wirePeriodField(){
+      populatePeriodDropdowns();
+      const startSelect = $('f_period_start');
+      const endSelect = $('f_period_end');
+      if(startSelect){
+        startSelect.addEventListener('change', ()=>{
+          updatePeriodEndOptions();
+          if(startSelect.value && endSelect){
+            const startOrder = fyOrder(startSelect.value);
+            const endOrder = fyOrder(endSelect.value);
+            if(!endSelect.value || endOrder < startOrder){
+              endSelect.value = startSelect.value;
+            }
+          }
+          updatePeriodHidden();
+          if(startSelect.value && endSelect && !endSelect.value){ endSelect.focus(); }
+        });
+      }
+      if(endSelect){
+        endSelect.addEventListener('change', ()=>{
+          updatePeriodHidden();
+        });
+      }
+      updatePeriodEndOptions();
+      updatePeriodHidden();
+    }
+
+    function setPeriodValue(value){
+      populatePeriodDropdowns();
+      const startSelect = $('f_period_start');
+      const endSelect = $('f_period_end');
+      const hidden = $('f_period');
+      const trimmed = (value || '').trim();
+      if(!startSelect || !endSelect || !hidden){
+        if(hidden) hidden.value = trimmed;
+        return;
+      }
+      if(!trimmed){
+        startSelect.value = '';
+        endSelect.value = '';
+        updatePeriodEndOptions();
+        updatePeriodHidden();
+        return;
+      }
+      const parts = trimmed.split(/\s+to\s+/i);
+      const startVal = parts[0]?.trim() || '';
+      const endVal = parts[1]?.trim() || startVal;
+      ensureFinancialYearOption(startSelect, startVal);
+      ensureFinancialYearOption(endSelect, startVal);
+      ensureFinancialYearOption(startSelect, endVal);
+      ensureFinancialYearOption(endSelect, endVal);
+      startSelect.value = startVal;
+      endSelect.value = endVal;
+      updatePeriodEndOptions();
+      updatePeriodHidden();
+    }
+
+    function wireIssuingCircleSync(){
+      const source = $('f_circle');
+      const target = $('f_iss_circle');
+      if(!source || !target) return;
+      const ensureOption = (select, value)=>{
+        if(!value) return;
+        const exists = Array.from(select.options || []).some(opt => opt.value === value);
+        if(!exists){
+          const opt = document.createElement('option');
+          opt.value = value;
+          opt.textContent = value;
+          opt.dataset.dynamic = 'true';
+          select.appendChild(opt);
+        }
+      };
+      const sync = ()=>{
+        const value = source.value || '';
+        if(!value){
+          target.value = '';
+          return;
+        }
+        ensureOption(target, value);
+        target.value = value;
+      };
+      source.addEventListener('change', sync);
+      sync();
     }
     function wireParaGroupToggles(){
       const tMajor = $('toggleMajor');
@@ -1629,13 +1899,32 @@
       revElement.dataset.role = isMinor ? 'minor-rev' : 'major-rev';
       content.appendChild(createField('Revenue implication, if any', revElement));
 
+      const agreeStatus = obj.agreeStatus || '';
+      const agreeNotes = obj.agreeNotes || (!obj.agreeStatus && obj.agree ? obj.agree : obj.agree || '');
+      const agreeContainer = document.createElement('div');
+      agreeContainer.style.display = 'flex';
+      agreeContainer.style.flexDirection = 'column';
+      agreeContainer.style.gap = '6px';
+      const agreeSelect = document.createElement('select');
+      agreeSelect.dataset.role = 'agree-status';
+      agreeSelect.innerHTML = [
+        '<option value="">Select status</option>',
+        '<option value="Agreed">Agreed</option>',
+        '<option value="Not Agreed">Not Agreed</option>',
+        '<option value="Partially Agreed">Partially Agreed</option>',
+        '<option value="No reply received">No reply received</option>'
+      ].join('');
+      if(agreeStatus) agreeSelect.value = agreeStatus;
+      agreeSelect.addEventListener('change', ()=> updateParaSummary(card));
       const agreeTextarea = document.createElement('textarea');
-      agreeTextarea.value = obj.agree || '';
-      agreeTextarea.placeholder = 'Enter assessee response / agreement details';
+      agreeTextarea.value = agreeNotes || '';
+      agreeTextarea.placeholder = 'Provide remarks / reasons (if applicable)';
       agreeTextarea.style.minHeight = '42px';
-      agreeTextarea.dataset.role = 'agree';
+      agreeTextarea.dataset.role = 'agree-notes';
       agreeTextarea.addEventListener('input', ()=> updateParaSummary(card));
-      content.appendChild(createField('Assessee/Taxable Person agreement (Yes/No — reasons if No)', agreeTextarea));
+      agreeContainer.appendChild(agreeSelect);
+      agreeContainer.appendChild(agreeTextarea);
+      content.appendChild(createField('Assessee/Taxable Person agreement (Status — reasons if applicable)', agreeContainer));
 
       const auditTextarea = document.createElement('textarea');
       auditTextarea.value = obj.audit || '';
@@ -1709,7 +1998,12 @@
     const addMinorBtn = $('addMinorRow'); if(addMinorBtn) addMinorBtn.title = 'Click here to add Minor Para';
     $('addRow').onclick = ()=> addRow({}, { minor:false });
     $('addMinorRow').onclick = ()=> addRow({}, { minor:true });
-    $('clearRows').onclick = ()=> { parasContainer.innerHTML=''; renumberParas(); };
+    const CLEAR_SECTION_WARNING = 'This will delete the contents of the entire section. Are you sure to proceed?';
+    $('clearRows').onclick = ()=> {
+      if(!confirm(CLEAR_SECTION_WARNING)) return;
+      parasContainer.innerHTML='';
+      renumberParas();
+    };
 
     REQUIRED_FIELDS.forEach(({ id }) => {
       const field = $(id);
@@ -1910,14 +2204,14 @@
       }
       const gistDiv = card.querySelector('[data-role="gist"]');
       const gistText = gistDiv ? (gistDiv.textContent || gistDiv.innerText || '').trim() : '';
-      const agreeText = card.querySelector('textarea[data-role="agree"]')?.value?.trim() || '';
+      const agreeDetails = readAgreementFromCard(card);
       const auditText = card.querySelector('textarea[data-role="audit"]')?.value?.trim() || '';
       let statusClass = 'warning';
       let statusLabel = 'Incomplete';
-      if(gistText && agreeText && auditText){
+      if(gistText && agreeDetails.status && auditText){
         statusClass = 'success';
         statusLabel = 'Ready';
-      }else if(gistText || agreeText || auditText){
+      }else if(gistText || agreeDetails.status || (agreeDetails.notes || '').trim() || auditText){
         statusLabel = 'In progress';
       }
       const detDisplay = detectionHas ? formatCurrencyValue(detectionTotal) : '—';
@@ -2294,7 +2588,10 @@
       renumberRisk();
     }
     $('addRisk').onclick = ()=> addRiskRow({});
-    $('clearRisk').onclick = ()=> { rtbody.innerHTML=''; };
+    $('clearRisk').onclick = ()=> {
+      if(!confirm(CLEAR_SECTION_WARNING)) return;
+      rtbody.innerHTML='';
+    };
     function renumberRisk(){ let i=1; for(const tr of Array.from(rtbody.children)){ if(!(tr.tagName && tr.tagName.toLowerCase()==='tr')) continue; const inNo = tr.querySelector('td:first-child input'); if(inNo) inNo.value=String(i++); } }
 
     function norm(s){ return (s||'').toLowerCase().replace(/[\u2013\u2014]/g,'-').replace(/\s+/g,' ').replace(/[^a-z0-9&/.,:() \-]/g,'').trim(); }
@@ -2617,14 +2914,16 @@
         }else{
           revStructured = readMajorRevenue(card);
         }
-        const agree = card.querySelector('textarea[data-role="agree"]')?.value || '';
+        const agreement = readAgreementFromCard(card);
         const audit = card.querySelector('textarea[data-role="audit"]')?.value || '';
         paras.push({
           no,
           gistHtml,
           rev: revText,
           revStructured,
-          agree,
+          agree: agreement.display,
+          agreeStatus: agreement.status,
+          agreeNotes: agreement.notes,
           audit,
           minor: isMinor
         });
@@ -2828,20 +3127,22 @@
         $('f_name').value = f.f_name||'';
         $('f_gstin').value = f.f_gstin||'';
         $('f_division').value = f.f_division||'';
-        $('f_category').value = f.f_category||'';
+        setCategoryValue(f.f_category||'');
         $('f_type').value = f.f_type||'';
         $('f_product').value = f.f_product||'';
         $('f_tariff').value = f.f_tariff||'';
-        $('f_period').value = f.f_period||'';
+        setPeriodValue(f.f_period||'');
         $('f_address').value = f.f_address||'';
-        if($('f_circle')) $('f_circle').value = f.f_circle || '';
+        if($('f_circle')){
+          $('f_circle').value = f.f_circle || '';
+          $('f_circle').dispatchEvent(new Event('change', { bubbles: true }));
+        }
         $('f_group').value = f.f_group||'';
         if($('f_officers')) $('f_officers').value = f.f_officers || '';
         $('f_ar').value = f.f_ar||'';
         $('f_mcm').value = coerceToISODate(f.f_mcm||'');
         if($('f_iss_name')) $('f_iss_name').value = f.f_iss_name||'';
         if($('f_iss_desig')) $('f_iss_desig').value = f.f_iss_desig||'';
-        if($('f_iss_circle')) $('f_iss_circle').value = f.f_iss_circle||'';
         renderAuditDates();
         const t = data.totals||{};
         const rv = t.rev||{}; const vl = t.vol||{};
@@ -2864,7 +3165,10 @@
             gist: sanitizeRichText(p.gistHtml || ''),
             rev: p.rev || p.revLegacy || '',
             revStructured: p.revStructured || p.revMajor || null,
-            agree: p.agree||'', audit: p.audit||''
+            agree: p.agree || '',
+            agreeStatus: p.agreeStatus || '',
+            agreeNotes: p.agreeNotes || '',
+            audit: p.audit||''
           };
           addRow(obj, { minor: !!p.minor });
         }
@@ -2912,7 +3216,8 @@
           revText = buildMajorRevenueSummary(revStructured || majorRevenueDefaults());
         }
         const cols = [no, '', revText];
-        const agreeVal = (card.querySelector('textarea[data-role="agree"]')?.value)||'';
+        const agreement = readAgreementFromCard(card);
+        const agreeVal = agreement.display;
         const auditVal = (card.querySelector('textarea[data-role="audit"]')?.value)||'';
         cols[3] = agreeVal;
         cols[4] = auditVal;
@@ -2963,8 +3268,8 @@
         const sl = card.querySelector('.para-sl-no')?.textContent || '';
         const gistNode = card.querySelector('[data-role="gist"]');
         const gistText = gistNode ? (gistNode.textContent || gistNode.innerText || '').replace(/ /g,' ').trim() : '';
-        const agreeNode = card.querySelector('textarea[data-role="agree"]');
-        const agreeText = agreeNode ? agreeNode.value.trim() : '';
+        const agreeStatusNode = card.querySelector('[data-role="agree-status"]');
+        const agreement = readAgreementFromCard(card);
         const auditNode = card.querySelector('textarea[data-role="audit"]');
         const auditText = auditNode ? auditNode.value.trim() : '';
         if(!isMinor){
@@ -2972,9 +3277,9 @@
             aggregates.flags.push(`Para ${sl || '?'}: Missing gist`);
             if(gistNode) aggregates.missing.push(gistNode);
           }
-          if(!agreeText){
-            aggregates.flags.push(`Para ${sl || '?'}: Missing assessee agreement`);
-            if(agreeNode) aggregates.missing.push(agreeNode);
+          if(!agreement.status){
+            aggregates.flags.push(`Para ${sl || '?'}: Missing assessee agreement status`);
+            if(agreeStatusNode) aggregates.missing.push(agreeStatusNode);
           }
           if(!auditText){
             aggregates.flags.push(`Para ${sl || '?'}: Missing auditors comments`);

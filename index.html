@@ -1516,6 +1516,7 @@
       const source = $('f_circle');
       const target = $('f_iss_circle');
       if(!source || !target) return;
+      let isMirrored = true;
       const ensureOption = (select, value)=>{
         if(!value) return;
         const exists = Array.from(select.options || []).some(opt => opt.value === value);
@@ -1531,12 +1532,25 @@
         const value = source.value || '';
         if(!value){
           target.value = '';
+          isMirrored = true;
           return;
         }
         ensureOption(target, value);
-        target.value = value;
+        if(target.value === ''){
+          target.value = value;
+          isMirrored = true;
+          return;
+        }
+        if(isMirrored || target.value === value){
+          target.value = value;
+          isMirrored = true;
+        }
       };
       source.addEventListener('change', sync);
+      target.addEventListener('change', ()=>{
+        isMirrored = target.value === (source.value || '');
+      });
+      isMirrored = target.value === (source.value || '');
       sync();
     }
     function wireParaGroupToggles(){

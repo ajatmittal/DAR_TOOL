@@ -189,7 +189,7 @@
 <body>
   <h1>
     DAR Generator for CGST Audit Thane
-    <div class="muted" style="font-size:14px">(Fill all fields to generate DAR)</div>
+    <div class="muted" style="font-size:14px">(All Part-I fields except A.R. No. are mandatory)</div>
   </h1>
 
   <nav class="sticky-nav" aria-label="Section navigation">
@@ -212,7 +212,7 @@
       <h2 id="preflightHeading">Pre-flight checklist</h2>
       <span id="preflightStatus" class="preflight-status" role="status" aria-live="polite" data-state="blocked">Core details incomplete</span>
     </div>
-    <p class="muted" style="margin-bottom:12px">Complete each item below to unlock DAR generation.</p>
+    <p class="muted" style="margin-bottom:12px">Complete each item below for a clean run – generation remains available anytime.</p>
     <ul class="preflight-list" id="preflightList">
       <li id="preflight-item-unit" class="preflight-item" data-state="pending">
         <span class="state-icon" aria-hidden="true">!</span>
@@ -275,7 +275,7 @@
     <div class="grid">
       <div>
         <label>DAR Generator for CGST Audit Thane</label>
-        <div class="muted">(Fill all fields to generate DAR)</div>
+        <div class="muted">(All Part-I fields except A.R. No. are mandatory)</div>
       </div>
     </div>
   </div>
@@ -286,16 +286,17 @@
       <div><label>Name of Unit <span class="required-indicator">Required</span></label><input id="f_name" type="text" required aria-required="true" /></div>
       <div><label>Registration No. (GST, ECC, STC) <span class="required-indicator">Required</span></label><input id="f_gstin" type="text" required aria-required="true" /></div>
       <div><label>Commissionerate/Division/Range <span class="required-indicator">Required</span></label><input id="f_division" type="text" required aria-required="true" /></div>
-      <div><label>Category</label><input id="f_category" type="text" /></div>
-      <div><label>Type</label>
-        <select id="f_type">
+      <div><label>Category <span class="required-indicator">Required</span></label><input id="f_category" type="text" required aria-required="true" /></div>
+      <div><label>Type <span class="required-indicator">Required</span></label>
+        <select id="f_type" required aria-required="true">
+          <option value="" disabled selected>Select Type</option>
           <option value="Small">Small</option>
           <option value="Medium">Medium</option>
           <option value="Large">Large</option>
         </select>
       </div>
-      <div><label>Goods/Services supplied</label><input id="f_product" type="text" /></div>
-      <div><label>Tariff Item (Fill HSN/SAC here)</label><input id="f_tariff" type="text" /></div>
+      <div><label>Goods/Services supplied <span class="required-indicator">Required</span></label><input id="f_product" type="text" required aria-required="true" /></div>
+      <div><label>Tariff Item (Fill HSN/SAC here) <span class="required-indicator">Required</span></label><input id="f_tariff" type="text" required aria-required="true" /></div>
       <div><label>Period Covered <span class="required-indicator">Required</span></label><input id="f_period" type="text" required aria-required="true" /></div>
       <div>
         <label>Date of Visit <span class="required-indicator">Required</span></label>
@@ -309,20 +310,20 @@
           <input id="f_audit_dates" type="hidden" />
         </div>
       </div>
-      <div><label>A.R. No. <span class="required-indicator">Required</span></label><input id="f_ar" type="text" required aria-required="true" /></div>
-      <div><label>MCM Date</label><input id="f_mcm" type="date" /></div>
+      <div><label>A.R. No.</label><input id="f_ar" type="text" /></div>
+      <div><label>MCM Date <span class="required-indicator">Required</span></label><input id="f_mcm" type="date" required aria-required="true" /></div>
       <!-- Rows 15 and 16 are captured in dedicated nested tables below -->
     </div>
     <div style="margin-top:12px">
-      <label>Address</label>
-      <textarea id="f_address"></textarea>
+      <label>Address <span class="required-indicator">Required</span></label>
+      <textarea id="f_address" required aria-required="true"></textarea>
     </div>
     <div style="margin-top:12px">
-      <label for="f_officers">Circle, Group and Officers</label>
+      <label for="f_officers">Circle, Group and Officers <span class="required-indicator">Required</span></label>
       <div class="circle-group-row">
         <div class="circle-field">
-          <label for="f_circle" class="sub-label">Circle</label>
-          <select id="f_circle">
+          <label for="f_circle" class="sub-label">Circle <span class="required-indicator">Required</span></label>
+          <select id="f_circle" required aria-required="true">
             <option value="">Select Circle</option>
             <option value="I">I</option>
             <option value="II">II</option>
@@ -337,8 +338,8 @@
           </select>
         </div>
         <div class="circle-field">
-          <label for="f_group" class="sub-label">Group</label>
-          <select id="f_group">
+          <label for="f_group" class="sub-label">Group <span class="required-indicator">Required</span></label>
+          <select id="f_group" required aria-required="true">
             <option value="">Select Group</option>
             <option value="1">1</option>
             <option value="2">2</option>
@@ -370,7 +371,7 @@
           </select>
         </div>
       </div>
-      <textarea id="f_officers" placeholder="List officers / team members"></textarea>
+      <textarea id="f_officers" placeholder="List officers / team members" required aria-required="true"></textarea>
     </div>
   </div>
 
@@ -532,7 +533,7 @@
 
   <div class="card">
     <div class="row" style="gap:8px; flex-wrap:wrap; align-items:center">
-      <button id="generate" disabled>Generate DAR</button>
+      <button id="generate">Generate DAR</button>
       <button id="downloadLast" class="secondary" type="button" disabled>Download Last Output</button>
       <span id="status" class="muted"></span>
     </div>
@@ -572,8 +573,16 @@
       { id: 'f_name', label: 'Name of Unit' },
       { id: 'f_gstin', label: 'Registration Number' },
       { id: 'f_division', label: 'Commissionerate/Division/Range' },
+      { id: 'f_category', label: 'Category' },
+      { id: 'f_type', label: 'Type' },
+      { id: 'f_product', label: 'Goods/Services supplied' },
+      { id: 'f_tariff', label: 'Tariff Item (HSN/SAC)' },
       { id: 'f_period', label: 'Period Covered' },
-      { id: 'f_ar', label: 'A.R. Number' }
+      { id: 'f_mcm', label: 'MCM Date' },
+      { id: 'f_address', label: 'Address' },
+      { id: 'f_circle', label: 'Circle' },
+      { id: 'f_group', label: 'Group' },
+      { id: 'f_officers', label: 'Circle/Group Officers' }
     ];
     const PRECHECK_BLOCKERS = ['unit', 'audit', 'paras', 'gist'];
     const PREFLIGHT_LABELS = {
@@ -587,8 +596,7 @@
 
     const genBtn = $('generate');
     const downloadLastBtn = $('downloadLast');
-    // Preloaded template, gate readiness via the checklist
-    genBtn.disabled = true;
+    // Preloaded template; download link stays disabled until a file is generated
     if(downloadLastBtn) downloadLastBtn.disabled = true;
     // Attach numeric/NQ restrictions and auto-calc listeners immediately
     try{ wireNestedAutoCalc(); recalcRevenue(); recalcVoluntary(); wireAuditDates(); wireParaGroupToggles(); applyGroupVisibility(); updatePart1TotalsFromParas(); }catch(e){}
@@ -900,7 +908,7 @@
       const gistState = !hasParas ? 'pending' : (gistMissing === 0 ? 'complete' : 'attention');
       const revenueState = !hasParas ? 'pending' : (revenueMissing === 0 && revenuePresent > 0 ? 'complete' : 'attention');
       const states = {
-        unit: { state: requiredComplete ? 'complete' : 'pending', detail: requiredComplete ? '' : 'Enter unit name, GSTIN, division, period, and A.R. number.' },
+        unit: { state: requiredComplete ? 'complete' : 'pending', detail: requiredComplete ? '' : 'Fill all Part-I fields (except A.R. number).' },
         audit: { state: auditComplete ? 'complete' : 'pending', detail: auditComplete ? '' : 'Add at least one audit visit date.' },
         paras: { state: hasParas ? 'complete' : 'pending', detail: hasParas ? '' : 'Add a major or minor para to continue.' },
         gist: { state: gistState, detail: gistMissing > 0 ? `${gistMissing} para${gistMissing === 1 ? '' : 's'} still need gist text.` : '' },
@@ -915,9 +923,13 @@
         cardCount: cards.length
       };
       if(genBtn){
-        const disabled = blockingIncomplete.length > 0;
-        genBtn.disabled = disabled;
-        genBtn.setAttribute('aria-disabled', disabled ? 'true' : 'false');
+        if(genBtn.dataset.busy === 'true'){
+          genBtn.disabled = true;
+          genBtn.setAttribute('aria-disabled', 'true');
+        }else{
+          genBtn.disabled = false;
+          genBtn.setAttribute('aria-disabled', 'false');
+        }
       }
       if(statusEl){
         if(blockingIncomplete.length === 0){
@@ -2751,7 +2763,7 @@
         $('f_gstin').value = f.f_gstin||'';
         $('f_division').value = f.f_division||'';
         $('f_category').value = f.f_category||'';
-        $('f_type').value = f.f_type||'Small';
+        $('f_type').value = f.f_type||'';
         $('f_product').value = f.f_product||'';
         $('f_tariff').value = f.f_tariff||'';
         $('f_period').value = f.f_period||'';
@@ -3421,6 +3433,8 @@
       $('log').textContent='';
       setStatus('Generating…');
       genBtn.disabled = true;
+      genBtn.setAttribute('aria-disabled', 'true');
+      genBtn.dataset.busy = 'true';
       showOverlay('Generating DAR…');
       if(partTotalsTimer){ clearTimeout(partTotalsTimer); partTotalsTimer = null; }
       try{ updatePart1TotalsFromParas(); }catch(_){}
@@ -3458,7 +3472,9 @@
       }
       finally{
         hideOverlay();
+        delete genBtn.dataset.busy;
         genBtn.disabled = false;
+        genBtn.setAttribute('aria-disabled', 'false');
       }
     });
 

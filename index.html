@@ -3123,7 +3123,7 @@
         if(cells.length < 3) continue;
         const label = norm(textOf(cells[1]));
         // Handle nested tables for rows 15 and 16 (be tolerant of extra text in cell)
-        if(label.includes('total revenue detection') || label.includes('total voluntary payment')){
+        if(label.includes('total revenue detection') || label.includes('total voluntary payment') || label.includes('total recoveries')){
           const nt = cells[2].getElementsByTagNameNS(WNS,'tbl')[0];
           if(nt){
             const rows = getRows(nt); // expect header + rows

@@ -29,25 +29,16 @@
     .validation-summary h2 { margin: 0 0 8px; font-size: 18px; }
     .validation-summary ul { margin: 0; padding-left: 20px; }
     .validation-summary li { margin-bottom: 6px; }
-    .required-indicator { color: #b91c1c; font-size: 11px; font-weight: 600; margin-left: 6px; letter-spacing: 0.05em; text-transform: uppercase; }
-    .preflight-card { border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-bottom: 16px; background: #f8fafc; box-shadow: 0 1px 2px rgba(15,23,42,0.05); }
-    .preflight-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
-    .preflight-header h2 { margin: 0; font-size: 18px; color: #111827; }
-    .preflight-status { font-size: 13px; font-weight: 600; color: #1d4ed8; }
-    .preflight-status[data-state="ready"] { color: #047857; }
-    .preflight-status[data-state="blocked"] { color: #b91c1c; }
-    .preflight-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
-    .preflight-item { display: flex; gap: 12px; border: 1px solid #e5e7eb; border-radius: 10px; padding: 12px; background: #fff; align-items: flex-start; }
-    .preflight-item .state-icon { width: 20px; height: 20px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
-    .preflight-item[data-state="complete"] { border-color: #bbf7d0; background: #f0fdf4; }
-    .preflight-item[data-state="complete"] .state-icon { background: #15803d; color: #fff; }
-    .preflight-item[data-state="attention"] { border-color: #fef3c7; background: #fffbeb; }
-    .preflight-item[data-state="attention"] .state-icon { background: #f59e0b; color: #fff; }
-    .preflight-item[data-state="pending"] { border-color: #fecdd3; background: #fff1f2; }
-    .preflight-item[data-state="pending"] .state-icon { background: #e11d48; color: #fff; }
-    .preflight-text { display: flex; flex-direction: column; gap: 2px; }
-    .preflight-title { font-weight: 600; color: #111827; }
-    .preflight-hint { font-size: 13px; color: #4b5563; }
+    .required-indicator { color: #b91c1c; font-weight: 600; margin-left: 4px; }
+    .field-wrapper { display: flex; flex-direction: column; gap: 4px; position: relative; }
+    .field-wrapper .field-control { display: flex; align-items: center; gap: 8px; }
+    .field-wrapper .field-control.align-top { align-items: flex-start; }
+    .field-wrapper .field-control.align-top .field-tick { margin-top: 4px; }
+    .field-wrapper .field-control > *:first-child { flex: 1; }
+    .field-tick { display: none; color: #15803d; font-weight: 700; font-size: 16px; line-height: 1; }
+    .field-wrapper.has-value .field-tick { display: inline-flex; }
+    .field-wrapper textarea { width: 100%; }
+    .field-wrapper select, .field-wrapper input[type=text], .field-wrapper input[type=date], .field-wrapper textarea { flex: 1; }
     #auditDates.field-error, .paras-cards.field-error { box-shadow: 0 0 0 2px rgba(185, 28, 28, 0.35); border-radius: 10px; }
     .rev-bars { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 10px; margin-top: 6px; align-items: center; }
     .rev-bars .bar-row { display: contents; }
@@ -70,7 +61,7 @@
     #paras th:nth-child(4), #paras td:nth-child(4) { width: 10%; }
     #paras th:nth-child(5), #paras td:nth-child(5) { width: 10%; }
     #paras td:nth-child(2) textarea, .gist-textarea { min-height: 140px; }
-    .gist-editor { width: 100%; min-height: 140px; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px; background: #fff; overflow: auto; }
+    .gist-editor { width: 100%; min-height: 140px; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px; background: #fff; overflow: auto; white-space: pre-wrap; word-break: break-word; writing-mode: horizontal-tb; }
     .gist-editor:empty:before { content: attr(data-placeholder); color: #9ca3af; }
     .gist-editor table { border-collapse: collapse; width: 100%; }
     .gist-editor th, .gist-editor td { border: 1px solid #d1d5db; padding: 4px 6px; }
@@ -182,7 +173,6 @@
     .dashboard-flags .flag { background: #fef2f2; color: #b91c1c; padding: 8px; border-radius: 6px; margin-bottom: 8px; font-size: 14px; }
     .dashboard-flags .flag:last-child { margin-bottom: 0; }
   </style>
-  </style>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
 </head>
@@ -205,51 +195,6 @@
     <h2>Review required fields</h2>
     <p class="muted" style="color:#7f1d1d; margin-bottom:8px">Resolve the issues below before generating the DAR.</p>
     <ul id="validationList"></ul>
-  </section>
-
-  <section class="preflight-card" id="preflightChecklist" aria-labelledby="preflightHeading">
-    <div class="preflight-header">
-      <h2 id="preflightHeading">Pre-flight checklist</h2>
-      <span id="preflightStatus" class="preflight-status" role="status" aria-live="polite" data-state="blocked">Core details incomplete</span>
-    </div>
-    <p class="muted" style="margin-bottom:12px">Complete each item below for a clean run – generation remains available anytime.</p>
-    <ul class="preflight-list" id="preflightList">
-      <li id="preflight-item-unit" class="preflight-item" data-state="pending">
-        <span class="state-icon" aria-hidden="true">!</span>
-        <div class="preflight-text">
-          <span class="preflight-title">Unit details</span>
-          <span class="preflight-hint" data-default="Enter the unit name, registration number, and division information.">Enter the unit name, registration number, and division information.</span>
-        </div>
-      </li>
-      <li id="preflight-item-audit" class="preflight-item" data-state="pending">
-        <span class="state-icon" aria-hidden="true">!</span>
-        <div class="preflight-text">
-          <span class="preflight-title">Audit visit dates</span>
-          <span class="preflight-hint" data-default="Add at least one audit visit date using the picker above.">Add at least one audit visit date using the picker above.</span>
-        </div>
-      </li>
-      <li id="preflight-item-paras" class="preflight-item" data-state="pending">
-        <span class="state-icon" aria-hidden="true">!</span>
-        <div class="preflight-text">
-          <span class="preflight-title">Paras captured</span>
-          <span class="preflight-hint" data-default="Create at least one major or minor para before generating.">Create at least one major or minor para before generating.</span>
-        </div>
-      </li>
-      <li id="preflight-item-gist" class="preflight-item" data-state="pending">
-        <span class="state-icon" aria-hidden="true">!</span>
-        <div class="preflight-text">
-          <span class="preflight-title">Gist summaries</span>
-          <span class="preflight-hint" data-default="Summaries, agreement, and audit remarks must be filled for each para.">Summaries, agreement, and audit remarks must be filled for each para.</span>
-        </div>
-      </li>
-      <li id="preflight-item-revenue" class="preflight-item" data-state="attention">
-        <span class="state-icon" aria-hidden="true">!</span>
-        <div class="preflight-text">
-          <span class="preflight-title">Revenue data review</span>
-          <span class="preflight-hint" data-default="Enter detection and recovery figures so autosave snapshots highlight totals accurately.">Enter detection and recovery figures so autosave snapshots highlight totals accurately.</span>
-        </div>
-      </li>
-    </ul>
   </section>
 
   <div id="totalsRibbon" class="totals-ribbon" role="status" aria-live="polite">
@@ -283,95 +228,168 @@
   <div class="card" id="section-part1">
     <h3>PART-I</h3>
     <div class="grid">
-      <div><label>Name of Unit <span class="required-indicator">Required</span></label><input id="f_name" type="text" required aria-required="true" /></div>
-      <div><label>Registration No. (GST, ECC, STC) <span class="required-indicator">Required</span></label><input id="f_gstin" type="text" required aria-required="true" /></div>
-      <div><label>Commissionerate/Division/Range <span class="required-indicator">Required</span></label><input id="f_division" type="text" required aria-required="true" /></div>
-      <div><label>Category <span class="required-indicator">Required</span></label><input id="f_category" type="text" required aria-required="true" /></div>
-      <div><label>Type <span class="required-indicator">Required</span></label>
-        <select id="f_type" required aria-required="true">
-          <option value="" disabled selected>Select Type</option>
-          <option value="Small">Small</option>
-          <option value="Medium">Medium</option>
-          <option value="Large">Large</option>
-        </select>
-      </div>
-      <div><label>Goods/Services supplied <span class="required-indicator">Required</span></label><input id="f_product" type="text" required aria-required="true" /></div>
-      <div><label>Tariff Item (Fill HSN/SAC here) <span class="required-indicator">Required</span></label><input id="f_tariff" type="text" required aria-required="true" /></div>
-      <div><label>Period Covered <span class="required-indicator">Required</span></label><input id="f_period" type="text" required aria-required="true" /></div>
-      <div>
-        <label>Date of Visit <span class="required-indicator">Required</span></label>
-        <div id="auditDates" class="date-multi">
-          <div class="row" style="gap:6px">
-            <input id="f_audit_date_input" type="date" />
-            <button class="secondary" id="addAuditDateBtn" type="button">Add Date</button>
-          </div>
-          <div id="auditDateError" class="muted" style="color:#B91C1C; display:none; margin-top:4px"></div>
-          <div id="auditDatesList" class="row" style="gap:6px; margin-top:6px"></div>
-          <input id="f_audit_dates" type="hidden" />
+      <div class="field-wrapper" data-field-wrapper="f_name">
+        <label for="f_name">Name of Unit <span class="required-indicator" aria-hidden="true">*</span></label>
+        <div class="field-control">
+          <input id="f_name" type="text" required aria-required="true" />
+          <span class="field-tick" aria-hidden="true">✓</span>
         </div>
       </div>
-      <div><label>A.R. No.</label><input id="f_ar" type="text" /></div>
-      <div><label>MCM Date <span class="required-indicator">Required</span></label><input id="f_mcm" type="date" required aria-required="true" /></div>
+      <div class="field-wrapper" data-field-wrapper="f_gstin">
+        <label for="f_gstin">Registration No. (GST, ECC, STC) <span class="required-indicator" aria-hidden="true">*</span></label>
+        <div class="field-control">
+          <input id="f_gstin" type="text" required aria-required="true" />
+          <span class="field-tick" aria-hidden="true">✓</span>
+        </div>
+      </div>
+      <div class="field-wrapper" data-field-wrapper="f_division">
+        <label for="f_division">Commissionerate/Division/Range <span class="required-indicator" aria-hidden="true">*</span></label>
+        <div class="field-control">
+          <input id="f_division" type="text" required aria-required="true" />
+          <span class="field-tick" aria-hidden="true">✓</span>
+        </div>
+      </div>
+      <div class="field-wrapper" data-field-wrapper="f_category">
+        <label for="f_category">Category <span class="required-indicator" aria-hidden="true">*</span></label>
+        <div class="field-control">
+          <input id="f_category" type="text" required aria-required="true" />
+          <span class="field-tick" aria-hidden="true">✓</span>
+        </div>
+      </div>
+      <div class="field-wrapper" data-field-wrapper="f_type">
+        <label for="f_type">Type <span class="required-indicator" aria-hidden="true">*</span></label>
+        <div class="field-control">
+          <select id="f_type" required aria-required="true">
+            <option value="" disabled selected>Select Type</option>
+            <option value="Small">Small</option>
+            <option value="Medium">Medium</option>
+            <option value="Large">Large</option>
+          </select>
+          <span class="field-tick" aria-hidden="true">✓</span>
+        </div>
+      </div>
+      <div class="field-wrapper" data-field-wrapper="f_product">
+        <label for="f_product">Goods/Services supplied <span class="required-indicator" aria-hidden="true">*</span></label>
+        <div class="field-control">
+          <input id="f_product" type="text" required aria-required="true" />
+          <span class="field-tick" aria-hidden="true">✓</span>
+        </div>
+      </div>
+      <div class="field-wrapper" data-field-wrapper="f_tariff">
+        <label for="f_tariff">Tariff Item (Fill HSN/SAC here) <span class="required-indicator" aria-hidden="true">*</span></label>
+        <div class="field-control">
+          <input id="f_tariff" type="text" required aria-required="true" />
+          <span class="field-tick" aria-hidden="true">✓</span>
+        </div>
+      </div>
+      <div class="field-wrapper" data-field-wrapper="f_period">
+        <label for="f_period">Period Covered <span class="required-indicator" aria-hidden="true">*</span></label>
+        <div class="field-control">
+          <input id="f_period" type="text" required aria-required="true" />
+          <span class="field-tick" aria-hidden="true">✓</span>
+        </div>
+      </div>
+      <div class="field-wrapper" data-field-wrapper="f_audit_dates">
+        <label for="f_audit_date_input">Date of Visit <span class="required-indicator" aria-hidden="true">*</span></label>
+        <div class="field-control align-top">
+          <div id="auditDates" class="date-multi">
+            <div class="row" style="gap:6px">
+              <input id="f_audit_date_input" type="date" />
+              <button class="secondary" id="addAuditDateBtn" type="button">Add Date</button>
+            </div>
+            <div id="auditDateError" class="muted" style="color:#B91C1C; display:none; margin-top:4px"></div>
+            <div id="auditDatesList" class="row" style="gap:6px; margin-top:6px"></div>
+            <input id="f_audit_dates" type="hidden" />
+          </div>
+          <span class="field-tick" aria-hidden="true">✓</span>
+        </div>
+      </div>
+      <div class="field-wrapper" data-field-wrapper="f_ar">
+        <label for="f_ar">A.R. No.</label>
+        <div class="field-control">
+          <input id="f_ar" type="text" />
+          <span class="field-tick" aria-hidden="true">✓</span>
+        </div>
+      </div>
+      <div class="field-wrapper" data-field-wrapper="f_mcm">
+        <label for="f_mcm">MCM Date <span class="required-indicator" aria-hidden="true">*</span></label>
+        <div class="field-control">
+          <input id="f_mcm" type="date" required aria-required="true" />
+          <span class="field-tick" aria-hidden="true">✓</span>
+        </div>
+      </div>
       <!-- Rows 15 and 16 are captured in dedicated nested tables below -->
     </div>
-    <div style="margin-top:12px">
-      <label>Address <span class="required-indicator">Required</span></label>
-      <textarea id="f_address" required aria-required="true"></textarea>
+    <div class="field-wrapper" data-field-wrapper="f_address" style="margin-top:12px">
+      <label for="f_address">Address <span class="required-indicator" aria-hidden="true">*</span></label>
+      <div class="field-control align-top">
+        <textarea id="f_address" required aria-required="true"></textarea>
+        <span class="field-tick" aria-hidden="true">✓</span>
+      </div>
     </div>
-    <div style="margin-top:12px">
-      <label for="f_officers">Circle, Group and Officers <span class="required-indicator">Required</span></label>
+    <div class="field-wrapper" data-field-wrapper="f_officers" style="margin-top:12px">
+      <label for="f_officers">Circle, Group and Officers <span class="required-indicator" aria-hidden="true">*</span></label>
       <div class="circle-group-row">
-        <div class="circle-field">
-          <label for="f_circle" class="sub-label">Circle <span class="required-indicator">Required</span></label>
-          <select id="f_circle" required aria-required="true">
-            <option value="">Select Circle</option>
-            <option value="I">I</option>
-            <option value="II">II</option>
-            <option value="III">III</option>
-            <option value="IV">IV</option>
-            <option value="V">V</option>
-            <option value="VI">VI</option>
-            <option value="VII">VII</option>
-            <option value="VIII">VIII</option>
-            <option value="IX">IX</option>
-            <option value="27 (HQ)">27 (HQ)</option>
-          </select>
+        <div class="field-wrapper circle-field" data-field-wrapper="f_circle">
+          <label for="f_circle" class="sub-label">Circle <span class="required-indicator" aria-hidden="true">*</span></label>
+          <div class="field-control">
+            <select id="f_circle" required aria-required="true">
+              <option value="">Select Circle</option>
+              <option value="I">I</option>
+              <option value="II">II</option>
+              <option value="III">III</option>
+              <option value="IV">IV</option>
+              <option value="V">V</option>
+              <option value="VI">VI</option>
+              <option value="VII">VII</option>
+              <option value="VIII">VIII</option>
+              <option value="IX">IX</option>
+              <option value="27 (HQ)">27 (HQ)</option>
+            </select>
+            <span class="field-tick" aria-hidden="true">✓</span>
+          </div>
         </div>
-        <div class="circle-field">
-          <label for="f_group" class="sub-label">Group <span class="required-indicator">Required</span></label>
-          <select id="f_group" required aria-required="true">
-            <option value="">Select Group</option>
-            <option value="1">1</option>
-            <option value="2">2</option>
-            <option value="3">3</option>
-            <option value="4">4</option>
-            <option value="5">5</option>
-            <option value="6">6</option>
-            <option value="7">7</option>
-            <option value="8">8</option>
-            <option value="9">9</option>
-            <option value="10">10</option>
-            <option value="11">11</option>
-            <option value="12">12</option>
-            <option value="13">13</option>
-            <option value="14">14</option>
-            <option value="15">15</option>
-            <option value="16">16</option>
-            <option value="17">17</option>
-            <option value="18">18</option>
-            <option value="19">19</option>
-            <option value="20">20</option>
-            <option value="21">21</option>
-            <option value="22">22</option>
-            <option value="23">23</option>
-            <option value="24">24</option>
-            <option value="25">25</option>
-            <option value="26">26</option>
-            <option value="27 (HQ)">27 (HQ)</option>
-          </select>
+        <div class="field-wrapper circle-field" data-field-wrapper="f_group">
+          <label for="f_group" class="sub-label">Group <span class="required-indicator" aria-hidden="true">*</span></label>
+          <div class="field-control">
+            <select id="f_group" required aria-required="true">
+              <option value="">Select Group</option>
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+              <option value="5">5</option>
+              <option value="6">6</option>
+              <option value="7">7</option>
+              <option value="8">8</option>
+              <option value="9">9</option>
+              <option value="10">10</option>
+              <option value="11">11</option>
+              <option value="12">12</option>
+              <option value="13">13</option>
+              <option value="14">14</option>
+              <option value="15">15</option>
+              <option value="16">16</option>
+              <option value="17">17</option>
+              <option value="18">18</option>
+              <option value="19">19</option>
+              <option value="20">20</option>
+              <option value="21">21</option>
+              <option value="22">22</option>
+              <option value="23">23</option>
+              <option value="24">24</option>
+              <option value="25">25</option>
+              <option value="26">26</option>
+              <option value="27 (HQ)">27 (HQ)</option>
+            </select>
+            <span class="field-tick" aria-hidden="true">✓</span>
+          </div>
         </div>
       </div>
-      <textarea id="f_officers" placeholder="List officers / team members" required aria-required="true"></textarea>
+      <div class="field-control align-top" style="margin-top:8px">
+        <textarea id="f_officers" placeholder="List officers / team members" required aria-required="true"></textarea>
+        <span class="field-tick" aria-hidden="true">✓</span>
+      </div>
     </div>
   </div>
 
@@ -584,15 +602,34 @@
       { id: 'f_group', label: 'Group' },
       { id: 'f_officers', label: 'Circle/Group Officers' }
     ];
-    const PRECHECK_BLOCKERS = ['unit', 'audit', 'paras', 'gist'];
-    const PREFLIGHT_LABELS = {
-      unit: 'Unit details',
-      audit: 'Audit visit dates',
-      paras: 'Paras captured',
-      gist: 'Gist summaries',
-      revenue: 'Revenue data review'
-    };
-    let preflightSnapshot = { blockers: PRECHECK_BLOCKERS.length, revenueMissing: 0, gistMissing: 0, cardCount: 0 };
+    const COMPLETION_FIELDS = ['f_name','f_gstin','f_division','f_category','f_type','f_product','f_tariff','f_period','f_audit_dates','f_ar','f_mcm','f_address','f_circle','f_group','f_officers'];
+    const fieldCompletionUpdaters = new Map();
+    function fieldHasValue(field){
+      if(!field) return false;
+      if(field.type === 'checkbox' || field.type === 'radio') return field.checked;
+      return String(field.value || '').trim().length > 0;
+    }
+    function registerCompletionField(id){
+      const field = $(id);
+      const wrapper = document.querySelector(`[data-field-wrapper="${id}"]`);
+      if(!field || !wrapper) return;
+      const update = () => {
+        wrapper.classList.toggle('has-value', fieldHasValue(field));
+      };
+      ['input','change'].forEach(evt => field.addEventListener(evt, update));
+      fieldCompletionUpdaters.set(id, update);
+      update();
+    }
+    function refreshFieldCompletionStates(){
+      fieldCompletionUpdaters.forEach(update => update());
+    }
+    function updateFieldCompletionStateById(id){
+      const updater = fieldCompletionUpdaters.get(id);
+      if(updater) updater();
+    }
+    let preflightSnapshot = { revenueMissing: 0, gistMissing: 0, cardCount: 0 };
+
+    COMPLETION_FIELDS.forEach(registerCompletionField);
 
     const genBtn = $('generate');
     const downloadLastBtn = $('downloadLast');
@@ -809,21 +846,6 @@
       summary.setAttribute('aria-hidden','false');
     }
 
-    function setPreflightItemState(key, state, detail){
-      const item = document.getElementById(`preflight-item-${key}`);
-      if(!item) return;
-      item.dataset.state = state;
-      const icon = item.querySelector('.state-icon');
-      if(icon){
-        icon.textContent = state === 'complete' ? '✓' : state === 'attention' ? '⚠' : '!';
-      }
-      const hint = item.querySelector('.preflight-hint');
-      if(hint){
-        const base = hint.dataset.default || hint.textContent;
-        hint.textContent = detail || base;
-      }
-    }
-
     function cardHasGistContent(card){
       if(!card) return false;
       const gistEl = card.querySelector('[data-role="gist"]');
@@ -879,45 +901,16 @@
       return selectors.some(sel => hasValue(revContainer.querySelector(sel)?.value));
     }
 
-    function formatOutstandingList(keys){
-      if(!keys.length) return '';
-      if(keys.length === 1) return PREFLIGHT_LABELS[keys[0]] || keys[0];
-      const initial = keys.slice(0, -1).map(key => PREFLIGHT_LABELS[key] || key);
-      const last = PREFLIGHT_LABELS[keys[keys.length - 1]] || keys[keys.length - 1];
-      return `${initial.join(', ')} and ${last}`;
-    }
-
     function updatePreflightChecklist(){
-      const statusEl = $('preflightStatus');
       const container = document.getElementById('paras-container');
       const cards = container ? Array.from(container.children).filter(node => node.classList && node.classList.contains('para-card')) : [];
       let gistMissing = 0;
       let revenueMissing = 0;
-      let revenuePresent = 0;
       cards.forEach(card => {
         if(!cardHasGistContent(card)) gistMissing++;
-        if(cardHasRevenueContent(card)) revenuePresent++;
-        else revenueMissing++;
+        if(!cardHasRevenueContent(card)) revenueMissing++;
       });
-      const requiredComplete = REQUIRED_FIELDS.every(({ id }) => {
-        const field = $(id);
-        return field && String(field.value || '').trim();
-      });
-      const auditComplete = auditDates.length > 0;
-      const hasParas = cards.length > 0;
-      const gistState = !hasParas ? 'pending' : (gistMissing === 0 ? 'complete' : 'attention');
-      const revenueState = !hasParas ? 'pending' : (revenueMissing === 0 && revenuePresent > 0 ? 'complete' : 'attention');
-      const states = {
-        unit: { state: requiredComplete ? 'complete' : 'pending', detail: requiredComplete ? '' : 'Fill all Part-I fields (except A.R. number).' },
-        audit: { state: auditComplete ? 'complete' : 'pending', detail: auditComplete ? '' : 'Add at least one audit visit date.' },
-        paras: { state: hasParas ? 'complete' : 'pending', detail: hasParas ? '' : 'Add a major or minor para to continue.' },
-        gist: { state: gistState, detail: gistMissing > 0 ? `${gistMissing} para${gistMissing === 1 ? '' : 's'} still need gist text.` : '' },
-        revenue: { state: revenueState, detail: revenueMissing > 0 ? `${revenueMissing} para${revenueMissing === 1 ? '' : 's'} missing revenue figures will show ₹0 in exports.` : (revenueState === 'complete' ? 'All detection and recovery totals captured.' : '') }
-      };
-      Object.entries(states).forEach(([key, { state, detail }]) => setPreflightItemState(key, state, detail));
-      const blockingIncomplete = PRECHECK_BLOCKERS.filter(key => states[key].state !== 'complete');
       preflightSnapshot = {
-        blockers: blockingIncomplete.length,
         revenueMissing,
         gistMissing,
         cardCount: cards.length
@@ -931,17 +924,7 @@
           genBtn.setAttribute('aria-disabled', 'false');
         }
       }
-      if(statusEl){
-        if(blockingIncomplete.length === 0){
-          statusEl.dataset.state = 'ready';
-          statusEl.textContent = 'Ready to generate – all critical checks passed.';
-        }else{
-          const completed = PRECHECK_BLOCKERS.length - blockingIncomplete.length;
-          statusEl.dataset.state = 'blocked';
-          const outstanding = formatOutstandingList(blockingIncomplete);
-          statusEl.textContent = `${completed} of ${PRECHECK_BLOCKERS.length} critical items complete – ${outstanding} pending.`;
-        }
-      }
+      refreshFieldCompletionStates();
       renderAutosaveInfo();
     }
 
@@ -1174,6 +1157,7 @@
         list.appendChild(chip);
       }
       $('f_audit_dates').value = auditDates.join(', ');
+      updateFieldCompletionStateById('f_audit_dates');
       const err = $('auditDateError');
       if(err){ err.textContent = ''; err.style.display = 'none'; }
       updatePreflightChecklist();
@@ -2808,6 +2792,8 @@
           addRiskRow({ param:r.param||'', desc:r.desc||'', verifHtml: sanitizeRichText(r.verifHtml||'') });
         }
         renumberParas();
+        refreshFieldCompletionStates();
+        updatePreflightChecklist();
       }catch(e){ alert('Failed to load session: ' + (e?.message||e)); }
     }
 
@@ -3178,12 +3164,41 @@
               }
             }else{
               const data = nested.voluntary;
-              for(let i=1; i<rows.length && (i-1)<data.length; i++){
+              const grid = nt.getElementsByTagNameNS(WNS,'tblGrid')[0];
+              if(grid){
+                while(grid.firstChild) grid.removeChild(grid.firstChild);
+                ['2500','2200','2000','2200'].forEach(width => {
+                  const col = xml.createElementNS(WNS,'w:gridCol');
+                  col.setAttributeNS(WNS,'w:w', width);
+                  grid.appendChild(col);
+                });
+              }
+              if(rows.length){
+                for(let j=getCells(rows[0]).length; j<4; j++){
+                  rows[0].appendChild(xml.createElementNS(WNS,'w:tc'));
+                }
+                for(let j=getCells(rows[0]).length-1; j>=4; j--){
+                  rows[0].removeChild(getCells(rows[0])[j]);
+                }
+                const headerCells = getCells(rows[0]);
+                if(headerCells[1]) setCellText(xml, headerCells[1], 'Cash');
+                if(headerCells[2]) setCellText(xml, headerCells[2], 'ITC');
+                if(headerCells[3]) setCellText(xml, headerCells[3], 'Total');
+              }
+              for(let i=1; i<rows.length; i++){
+                for(let j=getCells(rows[i]).length; j<4; j++){
+                  rows[i].appendChild(xml.createElementNS(WNS,'w:tc'));
+                }
+                for(let j=getCells(rows[i]).length-1; j>=4; j--){
+                  rows[i].removeChild(getCells(rows[i])[j]);
+                }
                 const cs = getCells(rows[i]);
-                const d = data[i-1];
+                const d = data[i-1] || {};
                 const cash = d.cash || '';
                 const itc = d.itc || '';
-                const total = d.total && d.total.trim()!=='' ? d.total : String((num(d.cash)||0)+(num(d.itc)||0));
+                const hasCash = cash.trim() !== '';
+                const hasItc = itc.trim() !== '';
+                const total = d.total && d.total.trim()!=='' ? d.total : (hasCash || hasItc ? String((num(d.cash)||0)+(num(d.itc)||0)) : '');
                 if(cs[1]) setCellText(xml, cs[1], cash);
                 if(cs[2]) setCellText(xml, cs[2], itc);
                 if(cs[3]) setCellText(xml, cs[3], total);

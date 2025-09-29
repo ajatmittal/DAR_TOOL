@@ -189,7 +189,7 @@
 <body>
   <h1>
     DAR Generator for CGST Audit Thane
-    <div class="muted" style="font-size:14px">(Fill all Part-I fields; A.R. No. is optional)</div>
+    <div class="muted" style="font-size:14px">(Fill all Part-I fields — A.R. No. is optional)</div>
   </h1>
 
   <nav class="sticky-nav" aria-label="Section navigation">
@@ -309,7 +309,8 @@
           <input id="f_audit_dates" type="hidden" />
         </div>
       </div>
-      <div><label>A.R. No.</label><input id="f_ar" type="text" /></div>
+      <!-- The A.R. No. field is intentionally optional; do not add required attributes. -->
+      <div><label>A.R. No. <span class="muted">Optional</span></label><input id="f_ar" type="text" /></div>
       <div><label>MCM Date <span class="required-indicator">Required</span></label><input id="f_mcm" type="date" required aria-required="true" /></div>
       <!-- Rows 15 and 16 are captured in dedicated nested tables below -->
     </div>
@@ -581,20 +582,25 @@
       { id: 'f_address', label: 'Address' },
       { id: 'f_circle', label: 'Circle' },
       { id: 'f_group', label: 'Group' },
-      { id: 'f_officers', label: 'Circle, Group and Officers' }
+      { id: 'f_officers', label: 'Circle, Group and Officers' },
+      { id: 'f_audit_dates', label: 'Audit visit dates' }
     ];
-    const PRECHECK_BLOCKERS = ['unit', 'audit', 'paras', 'gist'];
-    const PREFLIGHT_LABELS = {
-      unit: 'Part-I details',
-      audit: 'Audit visit dates',
-      paras: 'Paras captured',
-      gist: 'Gist summaries',
-      revenue: 'Revenue data review'
+    const PREFLIGHT_ITEMS = {
+      unit: { label: 'Part-I details', blocking: true },
+      audit: { label: 'Audit visit dates', blocking: true },
+      paras: { label: 'Paras captured', blocking: true },
+      gist: { label: 'Gist summaries', blocking: true },
+      revenue: { label: 'Revenue data review', blocking: false }
     };
-    let preflightSnapshot = { blockers: PRECHECK_BLOCKERS.length, revenueMissing: 0, gistMissing: 0, cardCount: 0 };
+    const PREFLIGHT_LABELS = Object.fromEntries(Object.entries(PREFLIGHT_ITEMS).map(([key, info]) => [key, info.label]));
+    const PREFLIGHT_BLOCKERS = Object.entries(PREFLIGHT_ITEMS)
+      .filter(([, info]) => info.blocking)
+      .map(([key]) => key);
+    let preflightSnapshot = { blockers: 0, revenueMissing: 0, gistMissing: 0, cardCount: 0 };
 
     const genBtn = $('generate');
     const downloadLastBtn = $('downloadLast');
+    if(genBtn) genBtn.disabled = false;
     if(downloadLastBtn) downloadLastBtn.disabled = true;
     // Attach numeric/NQ restrictions and auto-calc listeners immediately
     try{ wireNestedAutoCalc(); recalcRevenue(); recalcVoluntary(); wireAuditDates(); wireParaGroupToggles(); applyGroupVisibility(); updatePart1TotalsFromParas(); }catch(e){}
@@ -913,7 +919,7 @@
         revenue: { state: revenueState, detail: revenueMissing > 0 ? `${revenueMissing} para${revenueMissing === 1 ? '' : 's'} missing revenue figures will show ₹0 in exports.` : (revenueState === 'complete' ? 'All detection and recovery totals captured.' : '') }
       };
       Object.entries(states).forEach(([key, { state, detail }]) => setPreflightItemState(key, state, detail));
-      const blockingIncomplete = PRECHECK_BLOCKERS.filter(key => states[key].state !== 'complete');
+      const blockingIncomplete = PREFLIGHT_BLOCKERS.filter(key => states[key].state !== 'complete');
       preflightSnapshot = {
         blockers: blockingIncomplete.length,
         revenueMissing,
@@ -925,10 +931,10 @@
           statusEl.dataset.state = 'ready';
           statusEl.textContent = 'Ready to generate – all critical checks passed.';
         }else{
-          const completed = PRECHECK_BLOCKERS.length - blockingIncomplete.length;
+          const completed = PREFLIGHT_BLOCKERS.length - blockingIncomplete.length;
           statusEl.dataset.state = 'blocked';
           const outstanding = formatOutstandingList(blockingIncomplete);
-          statusEl.textContent = `${completed} of ${PRECHECK_BLOCKERS.length} critical items complete – ${outstanding} pending.`;
+          statusEl.textContent = `${completed} of ${PREFLIGHT_BLOCKERS.length} critical items complete – ${outstanding} pending.`;
         }
       }
       renderAutosaveInfo();
@@ -1073,10 +1079,12 @@
       const text = document.createElement('div');
       text.textContent = message;
       toast.appendChild(text);
-      let timer = null;
       const dismiss = ()=>{
         toast.classList.remove('show');
-        if(timer){ clearTimeout(timer); timer = null; }
+        if(toast.dismissTimer){
+          clearTimeout(toast.dismissTimer);
+          toast.dismissTimer = null;
+        }
         setTimeout(()=>{ if(toast.parentNode) toast.parentNode.removeChild(toast); }, 300);
       };
       if(opts && opts.actionLabel && typeof opts.onAction === 'function'){
@@ -1098,7 +1106,7 @@
       container.appendChild(toast);
       requestAnimationFrame(()=> toast.classList.add('show'));
       const duration = typeof opts.duration === 'number' ? opts.duration : 5000;
-      if(duration > 0){ timer = setTimeout(dismiss, duration); }
+      if(duration > 0){ toast.dismissTimer = setTimeout(dismiss, duration); }
       if((opts && opts.focus) || type === 'error'){
         setTimeout(()=>{ try{ toast.focus({ preventScroll: true }); }catch(_){} }, 60);
       }

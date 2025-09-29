@@ -743,6 +743,70 @@
       return container.innerHTML;
     }
 
+    function saveCaretPosition(root){
+      if(!root) return null;
+      const sel = window.getSelection();
+      if(!sel || sel.rangeCount === 0) return null;
+      const range = sel.getRangeAt(0);
+      if(!root.contains(range.commonAncestorContainer)) return null;
+      const preRange = range.cloneRange();
+      preRange.selectNodeContents(root);
+      preRange.setEnd(range.startContainer, range.startOffset);
+      const start = preRange.toString().length;
+      const end = start + range.toString().length;
+      return { start, end };
+    }
+
+    function restoreCaretPosition(root, bookmark){
+      if(!root || !bookmark) return;
+      const range = document.createRange();
+      let startNode = null, startOffset = 0;
+      let endNode = null, endOffset = 0;
+      let charIndex = 0;
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+      let node;
+      while((node = walker.nextNode())){
+        const nextIndex = charIndex + node.textContent.length;
+        if(startNode === null && bookmark.start <= nextIndex){
+          startNode = node;
+          startOffset = bookmark.start - charIndex;
+        }
+        if(endNode === null && bookmark.end <= nextIndex){
+          endNode = node;
+          endOffset = bookmark.end - charIndex;
+          break;
+        }
+        charIndex = nextIndex;
+      }
+      if(!startNode){
+        startNode = root;
+        startOffset = root.childNodes.length;
+      }
+      if(!endNode){
+        endNode = startNode;
+        endOffset = startOffset;
+      }
+      try{
+        range.setStart(startNode, Math.max(0, startOffset));
+        range.setEnd(endNode, Math.max(0, endOffset));
+        const sel = window.getSelection();
+        if(sel){
+          sel.removeAllRanges();
+          sel.addRange(range);
+        }
+      }catch(e){
+        try{
+          range.selectNodeContents(root);
+          range.collapse(false);
+          const sel = window.getSelection();
+          if(sel){
+            sel.removeAllRanges();
+            sel.addRange(range);
+          }
+        }catch(_){ /* ignore */ }
+      }
+    }
+
     function setRichTextContent(el, html){
       if(!el) return;
       const safe = sanitizeRichText(html);
@@ -751,9 +815,19 @@
 
     function getSanitizedHtml(el){
       if(!el) return '';
-      const safe = sanitizeRichText(el.innerHTML);
-      if(el.innerHTML !== safe){
+      const current = el.innerHTML;
+      const safe = sanitizeRichText(current);
+      if(current !== safe){
+        let bookmark = null;
+        const activeSel = window.getSelection();
+        if(activeSel && activeSel.rangeCount){
+          const range = activeSel.getRangeAt(0);
+          if(el.contains(range.commonAncestorContainer)){
+            bookmark = saveCaretPosition(el);
+          }
+        }
         el.innerHTML = safe;
+        if(bookmark){ restoreCaretPosition(el, bookmark); }
       }
       return safe;
     }
@@ -1600,10 +1674,18 @@
             inp.addEventListener('input', ()=> updateParaSummary(card));
           });
         }else{
-          const majorInputs = card.querySelectorAll('[data-rev-cell="major"] input');
-          majorInputs.forEach(inp => {
-            inp.addEventListener('blur', ()=> updateParaSummary(card));
-          });
+          const majorCell = card.querySelector('[data-rev-cell="major"]');
+          const handleMajorChange = ()=>{
+            if(majorCell) updateMajorCellSummaries(majorCell);
+            schedulePartTotalsUpdate();
+            updateParaSummary(card);
+          };
+          if(majorCell){
+            majorCell.querySelectorAll('input').forEach(inp => {
+              inp.addEventListener('input', handleMajorChange);
+              inp.addEventListener('blur', handleMajorChange);
+            });
+          }
           const majorNotes = card.querySelector('.rev-major-notes');
           if(majorNotes) majorNotes.addEventListener('input', ()=> updateParaSummary(card));
         }

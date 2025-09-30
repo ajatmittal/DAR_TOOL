@@ -708,12 +708,15 @@
       let output = String(input);
       output = output.replace(/<!--[\s\S]*?-->/g, '');
       output = output.replace(/\/\*[\s\S]*?\*\//g, '');
+      output = output.replace(/<(style|script|title|head|xml)[^>]*>[\s\S]*?<\/\1>/gi, '');
+      output = output.replace(/<(meta|link|base)[^>]*>/gi, '');
       output = output.replace(/@font-face\s*\{[\s\S]*?\}/gi, '');
       output = output.replace(/mso-[a-z-]+:[^;"']*;?/gi, '');
       return output;
     }
 
     const ALLOWED_RICH_TAGS = new Set(['p','br','strong','em','u','b','i','a','ul','ol','li','table','thead','tbody','tr','th','td','span','div','sup','sub']);
+    const BLOCKED_RICH_TAGS = new Set(['style','script','meta','link','title','head','base','xml']);
     const ALLOWED_RICH_ATTRS = {
       a: ['href'],
       td: ['colspan','rowspan'],
@@ -755,6 +758,9 @@
           return null;
         }
         const tag = node.tagName.toLowerCase();
+        if(BLOCKED_RICH_TAGS.has(tag)){
+          return null;
+        }
         if(!ALLOWED_RICH_TAGS.has(tag)){
           const fragment = document.createDocumentFragment();
           cleanChildren(node, fragment);

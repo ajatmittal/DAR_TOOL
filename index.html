@@ -703,6 +703,16 @@
       });
     }
 
+    function stripWordArtifacts(input){
+      if(input == null) return '';
+      let output = String(input);
+      output = output.replace(/<!--[\s\S]*?-->/g, '');
+      output = output.replace(/\/\*[\s\S]*?\*\//g, '');
+      output = output.replace(/@font-face\s*\{[\s\S]*?\}/gi, '');
+      output = output.replace(/mso-[a-z-]+:[^;"']*;?/gi, '');
+      return output;
+    }
+
     const ALLOWED_RICH_TAGS = new Set(['p','br','strong','em','u','b','i','a','ul','ol','li','table','thead','tbody','tr','th','td','span','div','sup','sub']);
     const ALLOWED_RICH_ATTRS = {
       a: ['href'],
@@ -722,7 +732,8 @@
     function sanitizeRichText(html){
       if(!html) return '';
       const parser = new DOMParser();
-      const doc = parser.parseFromString(`<div>${html}</div>`, 'text/html');
+      const cleanedSource = stripWordArtifacts(html);
+      const doc = parser.parseFromString(`<div>${cleanedSource}</div>`, 'text/html');
       const container = document.createElement('div');
       function cleanChildren(source, target){
         for(const child of Array.from(source.childNodes)){
@@ -910,7 +921,7 @@
     }
 
     function insertPlainTextAtCaret(text, root){
-      const normalized = String(text || '').replace(/\r\n/g, '\n');
+      const normalized = String(stripWordArtifacts(text || '')).replace(/\r\n/g, '\n');
       const html = normalized.split('\n').map(line => escapeHtml(line)).join('<br>');
       insertHtmlAtCaret(html, root);
     }

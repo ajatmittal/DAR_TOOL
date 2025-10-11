@@ -679,8 +679,11 @@
         });
         navButtons.forEach(btn => {
           const active = btn.dataset.sectionTarget === target;
-          btn.setAttribute('aria-current', active ? 'true' : 'false');
-          btn.setAttribute('aria-expanded', active ? 'true' : 'false');
+          if (active) {
+            btn.setAttribute('aria-current', 'page');
+          } else {
+            btn.removeAttribute('aria-current');
+          }
         });
         if(sectionTools) placeSectionTools(target);
         currentTarget = target;

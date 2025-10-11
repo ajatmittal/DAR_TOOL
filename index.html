@@ -2869,13 +2869,19 @@
     function setCellBlocks(doc, tc, blocks, opts={}){
       clear(tc);
       if(!blocks || !blocks.length){ setCellText(doc, tc, ''); return; }
+      let prevWasTable = false;
       for(const b of blocks){
-        if(b && b.type==='table'){
+        const isTable = !!(b && b.type==='table');
+        if(isTable && prevWasTable){
+          tc.appendChild(wpParagraph(doc, '', { noSpacing: !!(opts && opts.noSpacing) }));
+        }
+        if(isTable){
           tc.appendChild(wpTable(doc, b.rows||[], { equalCols: !!(opts && opts.equalCols), noSpacing: !!(opts && opts.noSpacing), autoFitContents: !!(opts && opts.autoFitContents) }));
         }else{
           const text = (typeof b==='string') ? b : (b?.text||'');
           tc.appendChild(wpParagraph(doc, text, { noSpacing: !!(opts && opts.noSpacing), align: (opts && opts.align) || undefined }));
         }
+        prevWasTable = isTable;
       }
       // Ensure an editable caret position: add a trailing empty paragraph
       tc.appendChild(wpParagraph(doc, '', { noSpacing: !!(opts && opts.noSpacing) }));

@@ -13,3 +13,7 @@
 - **Rich-text sanitization:** After adding a para card, injecting `<script>` and `javascript:` URI content into the gist editor resulted in sanitized markup of `<div><p>Testalert(1)<a>bad</a></p></div>` where scripting content and unsafe URI attributes were stripped.
 
 These automated assertions confirm that the validation gate and rich-text sanitizer behave as expected in the browser.
+
+## Dashboard flag clearing check
+- **Setup:** Served the app locally with `python -m http.server 8000` and ran a headless Playwright script against `index.html` to mimic entering para data.
+- **Observation:** Upon adding a major para the dashboard reported three missing-field flags. After programmatically filling the gist, agreement status/notes, and audit comment, the script observed the dashboard flag list dropping to zero within the same interaction cycle, confirming immediate recalculation.

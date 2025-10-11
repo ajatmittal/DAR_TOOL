@@ -1201,6 +1201,7 @@
     let lastGeneratedBlob = null;
     let lastGeneratedName = 'Target-Filled.docx';
     let partTotalsTimer = null;
+    let dashboardTimer = null;
     function isValidDDMMYYYY(s){
       if(!/^\d{2}-\d{2}-\d{4}$/.test(s)) return false;
       const [dd,mm,yyyy] = s.split('-').map(x=>parseInt(x,10));
@@ -2100,7 +2101,7 @@
       }
       applyGroupVisibility();
       updatePart1TotalsFromParas();
-      updateDashboard();
+      scheduleDashboardUpdate();
       updatePreflightChecklist();
     }
 
@@ -2298,6 +2299,7 @@
       const recDisplay = recoveryHas ? formatCurrencyValue(recoveryCash + recoveryItc) : '—';
       summaryEl.innerHTML = `<span class="pill">Det ${detDisplay}</span><span class="pill">Rec ${recDisplay}</span><span class="pill ${statusClass}">${statusLabel}</span>`;
       updatePreflightChecklist();
+      scheduleDashboardUpdate();
     }
     function refreshAllParaSummaries(){
       document.querySelectorAll('.para-card').forEach(card => updateParaSummary(card));
@@ -2453,6 +2455,21 @@
     function schedulePartTotalsUpdate(){
       if(partTotalsTimer) clearTimeout(partTotalsTimer);
       partTotalsTimer = setTimeout(()=>{ partTotalsTimer = null; updatePart1TotalsFromParas(); }, 200);
+    }
+    function scheduleDashboardUpdate(){
+      if(typeof requestAnimationFrame === 'function'){
+        if(dashboardTimer && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(dashboardTimer);
+        dashboardTimer = requestAnimationFrame(()=>{
+          dashboardTimer = null;
+          updateDashboard();
+        });
+      }else{
+        if(dashboardTimer) clearTimeout(dashboardTimer);
+        dashboardTimer = setTimeout(()=>{
+          dashboardTimer = null;
+          updateDashboard();
+        }, 100);
+      }
     }
     function setFieldValue(id, value){ const el = $(id); if(el){ el.value = value; } }
     function updatePart1TotalsFromParas(){

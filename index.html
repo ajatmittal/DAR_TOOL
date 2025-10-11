@@ -193,7 +193,6 @@
       <button type="button" class="nav-link" data-section-target="summary" aria-controls="section-summary" aria-expanded="false">Summary</button>
       <button type="button" class="nav-link" data-section-target="risks" aria-controls="section-risks" aria-expanded="false">Risk Flags</button>
       <button type="button" class="nav-link" data-section-target="dashboard" aria-controls="dashboard-ribbon" aria-expanded="false">Dashboard</button>
-      <button type="button" class="nav-link" data-section-target="session" aria-controls="section-session" aria-expanded="false">Output &amp; Session</button>
     </nav>
     <main id="mainContent" class="app-main" aria-labelledby="pageTitle">
         <h1 id="pageTitle">
@@ -629,6 +628,7 @@
         if(!groups.has(key)) groups.set(key, []);
         groups.get(key).push(el);
       });
+      const persistentGroups = new Set(['session']);
       const isNaturallyFocusable = el => {
         if(!el) return false;
         return el.matches('a[href], button, input, textarea, select, summary, [tabindex]:not([tabindex="-1"])');
@@ -653,11 +653,12 @@
         }
         groups.forEach((elements, key) => {
           const active = key === target;
+          const shouldShow = active || persistentGroups.has(key);
           elements.forEach(el => {
-            if(active){
+            if(shouldShow){
               el.classList.remove('section-hidden');
               el.removeAttribute('hidden');
-              if(key === 'dashboard' && el.style && el.style.display === 'none'){
+              if(active && key === 'dashboard' && el.style && el.style.display === 'none'){
                 el.style.display = 'block';
               }
             }else{

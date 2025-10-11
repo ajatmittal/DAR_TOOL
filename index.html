@@ -692,12 +692,6 @@
           event.preventDefault();
           showTarget(btn.dataset.sectionTarget, { focus: true });
         });
-        btn.addEventListener('keydown', event => {
-          if(event.key === 'Enter' || event.key === ' '){
-            event.preventDefault();
-            showTarget(btn.dataset.sectionTarget, { focus: true });
-          }
-        });
       });
       showTarget(navButtons[0].dataset.sectionTarget, { focus: false });
     }

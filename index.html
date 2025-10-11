@@ -2686,7 +2686,7 @@
     $('addRisk').onclick = ()=> addRiskRow({});
     $('clearRisk').onclick = ()=> {
       if(!window.confirm('This will remove all risk flags. Do you want to continue?')) return;
-      rtbody.innerHTML='';
+      clear(rtbody);
     };
     function renumberRisk(){ let i=1; for(const tr of Array.from(rtbody.children)){ if(!(tr.tagName && tr.tagName.toLowerCase()==='tr')) continue; const inNo = tr.querySelector('td:first-child input'); if(inNo) inNo.value=String(i++); } }
 

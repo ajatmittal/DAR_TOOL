@@ -7,8 +7,8 @@
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Arial; margin: 0; background: #f3f4f6; }
     h1 { margin: 0 0 12px; font-size: 28px; text-align: center; }
-    .app-shell { display: grid; grid-template-columns: minmax(220px, 260px) minmax(0, 1fr); gap: 24px; align-items: stretch; height: 100vh; box-sizing: border-box; padding: 24px; overflow: hidden; }
-    .app-main { min-width: 0; overflow-y: auto; padding-right: 12px; padding-bottom: 32px; }
+    .app-shell { display: grid; grid-template-columns: minmax(220px, 260px) minmax(0, 1fr); gap: 24px; align-items: flex-start; }
+    .app-main { min-width: 0; }
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
     .card { border: 1px solid #d1d5db; border-radius: 10px; padding: 16px; margin-bottom: 16px; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
     label { font-weight: 600; display: block; margin-bottom: 4px; }
@@ -115,15 +115,25 @@
     .rev-summary { display: flex; justify-content: space-between; align-items: center; background: #e5e7eb; color: #1f2937; padding: 6px 8px; border-radius: 6px; margin-bottom: 6px; font-size: 13px; }
     .rev-summary label { font-weight: 600; }
     .rev-summary input { width: 140px; border: 1px solid #cbd5f5; border-radius: 4px; padding: 4px 6px; background: #f9fafb; color: #1f2937; text-align: right; cursor: not-allowed; }
-    .sticky-nav { position: sticky; top: 24px; z-index: 120; display: flex; flex-direction: column; gap: 8px; background: #ffffff; padding: 16px; border: 1px solid #e5e7eb; border-radius: 12px; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06); height: calc(100vh - 48px); overflow-y: auto; }
+    .sticky-nav { position: sticky; top: 24px; z-index: 120; display: flex; flex-direction: column; gap: 8px; background: #ffffff; padding: 16px; border: 1px solid #e5e7eb; border-radius: 12px; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06); max-height: calc(100vh - 48px); overflow-y: auto; }
     .sticky-nav .nav-link { display: block; width: 100%; border: 0; background: transparent; color: #2563eb; font-weight: 600; text-align: left; padding: 8px 12px; border-radius: 999px; cursor: pointer; transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease; font-family: inherit; font-size: 14px; }
     .sticky-nav .nav-link:hover { background: #eff6ff; }
     .sticky-nav .nav-link:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
-    .sticky-nav .nav-link[aria-current="page"] { background: #2563eb; color: #ffffff; box-shadow: 0 8px 16px rgba(37, 99, 235, 0.25); }
-    .totals-ribbon { position: sticky; top: 0; z-index: 110; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px 16px; display: flex; gap: 16px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-bottom: 16px; box-shadow: 0 6px 16px rgba(15,23,42,0.05); }
+    .sticky-nav .nav-link[aria-current="true"], .sticky-nav .nav-link[aria-expanded="true"] { background: #2563eb; color: #ffffff; box-shadow: 0 8px 16px rgba(37, 99, 235, 0.25); }
+    .totals-ribbon { position: sticky; top: 24px; z-index: 110; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px 16px; display: flex; gap: 16px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-bottom: 16px; box-shadow: 0 6px 16px rgba(15,23,42,0.05); }
     .totals-ribbon .totals-item { display: flex; flex-direction: column; min-width: 140px; }
     .totals-ribbon .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #475569; }
     .totals-ribbon .value { font-size: 20px; font-weight: 600; color: #1f2937; }
+    @media (max-width: 1024px) {
+      .app-shell { grid-template-columns: minmax(0, 1fr); }
+      .sticky-nav { position: sticky; top: 0; flex-direction: row; flex-wrap: wrap; align-items: center; max-height: none; overflow: visible; margin: 0 0 16px 0; }
+    }
+    @media (max-width: 720px) {
+      .sticky-nav { overflow-x: auto; flex-wrap: nowrap; gap: 8px; }
+      .sticky-nav .nav-link { flex: 0 0 auto; }
+      .totals-ribbon { position: static; }
+    }
+
     .circle-group-row { display: flex; gap: 12px; flex-wrap: wrap; margin: 8px 0; }
     .circle-field { display: flex; flex-direction: column; min-width: 150px; }
     .circle-field select { padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; background: #fff; }
@@ -171,8 +181,6 @@
     .dashboard-flags .flag { background: #fef2f2; color: #b91c1c; padding: 8px; border-radius: 6px; margin-bottom: 8px; font-size: 14px; }
     .dashboard-flags .flag:last-child { margin-bottom: 0; }
     .section-hidden { display: none !important; }
-    .section-tools-heading { margin: 0 0 12px; font-size: 16px; font-weight: 700; color: #1f2937; }
-    .section-tools .row + .row { margin-top: 12px; }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
@@ -180,11 +188,12 @@
 <body>
   <div class="app-shell">
     <nav class="sticky-nav" aria-label="Section navigation">
-      <button type="button" class="nav-link" data-section-target="part1" aria-controls="section-part1">Part-I</button>
-      <button type="button" class="nav-link" data-section-target="detection" aria-controls="section-detection">Detection &amp; Recovery</button>
-      <button type="button" class="nav-link" data-section-target="summary" aria-controls="section-summary">Summary</button>
-      <button type="button" class="nav-link" data-section-target="risks" aria-controls="section-risks">Risk Flags</button>
-      <button type="button" class="nav-link" data-section-target="dashboard" aria-controls="dashboard-ribbon">Dashboard</button>
+      <button type="button" class="nav-link" data-section-target="part1" aria-controls="section-part1" aria-expanded="false">Part-I</button>
+      <button type="button" class="nav-link" data-section-target="detection" aria-controls="section-detection" aria-expanded="false">Detection &amp; Recovery</button>
+      <button type="button" class="nav-link" data-section-target="summary" aria-controls="section-summary" aria-expanded="false">Summary</button>
+      <button type="button" class="nav-link" data-section-target="risks" aria-controls="section-risks" aria-expanded="false">Risk Flags</button>
+      <button type="button" class="nav-link" data-section-target="dashboard" aria-controls="dashboard-ribbon" aria-expanded="false">Dashboard</button>
+      <button type="button" class="nav-link" data-section-target="session" aria-controls="section-session" aria-expanded="false">Output &amp; Session</button>
     </nav>
     <main id="mainContent" class="app-main" aria-labelledby="pageTitle">
         <h1 id="pageTitle">
@@ -454,7 +463,7 @@
 
     <div class="card" id="section-summary" data-section-group="summary">
       <div class="row" style="justify-content: space-between;">
-        <h3 style="margin:0" data-section-focus="summary">Part-II- Summary of Audit Results</h3>
+        <h3 style="margin:0" data-section-focus="summary">SUMMARY OF AUDIT RESULTS</h3>
       </div>
       <div class="muted" style="margin-bottom:8px">Columns: Sl.No., Gist of objection, Revenue implication (if any), Assessee/Taxable Person agreement (status + remarks), Auditors Comments, conclusion and Proposal</div>
       <div class="row" style="justify-content: space-between; align-items:center; margin-bottom:8px; gap:12px;">
@@ -570,21 +579,23 @@
       <div class="dashboard-flags" id="dashboard-flags"></div>
     </div>
 
-    <div id="section-tools" class="card section-tools" hidden>
-      <h3 id="section-tools-heading" class="section-tools-heading">Output &amp; Session</h3>
+    <div class="card" id="section-output" data-section-group="session">
       <div class="row" style="gap:8px; flex-wrap:wrap; align-items:center">
         <button id="generate" data-section-focus="session">Generate DAR</button>
         <button id="downloadLast" class="secondary" type="button" disabled>Download Last Output</button>
         <span id="status" class="muted"></span>
       </div>
       <div id="log" class="log" style="margin-top:12px"></div>
-      <div class="row" style="gap:8px; align-items:center; flex-wrap:wrap; margin-top:16px;">
+    </div>
+
+    <div class="card" id="section-session" data-section-group="session">
+      <div class="row" style="gap:8px; align-items:center">
         <button id="saveSession" class="secondary" type="button">Save Session</button>
         <button id="loadSessionBtn" class="secondary" type="button">Load Session</button>
         <input id="loadSessionFile" type="file" accept="application/json,.json" style="display:none" />
         <span class="muted">Save your progress to a JSON file or restore it later.</span>
       </div>
-      <div class="row" style="gap:8px; align-items:center; flex-wrap:wrap;">
+      <div class="row" style="gap:8px; align-items:center; margin-top:10px; flex-wrap:wrap;">
         <button id="restoreAutosave" class="secondary" type="button">Restore Last Autosave</button>
         <button id="toggleAutosaveHistory" class="secondary" type="button">Show Autosave History</button>
         <span id="autosaveInfo" class="muted"></span>
@@ -611,10 +622,6 @@
     function setupSectionNavigation(){
       const navButtons = Array.from(document.querySelectorAll('.sticky-nav .nav-link[data-section-target]'));
       if(!navButtons.length) return;
-      const navLabels = new Map(navButtons.map(btn => [btn.dataset.sectionTarget, btn.textContent.trim()]));
-      const sectionTools = $('section-tools');
-      const sectionToolsHeading = $('section-tools-heading');
-      const appMain = document.querySelector('.app-main');
       const groups = new Map();
       document.querySelectorAll('[data-section-group]').forEach(el => {
         const key = el.dataset.sectionGroup;
@@ -622,35 +629,6 @@
         if(!groups.has(key)) groups.set(key, []);
         groups.get(key).push(el);
       });
-      let lastToolsPlacement = { target: null, anchor: null };
-      const getAnchorForTarget = target => {
-        const targetElements = groups.get(target) || [];
-        for(let i = targetElements.length - 1; i >= 0; i -= 1){
-          const el = targetElements[i];
-          if(el && el.isConnected) return el;
-        }
-        return null;
-      };
-      const placeSectionTools = target => {
-        if(!sectionTools || !appMain) return;
-        const anchor = getAnchorForTarget(target);
-        const placementParent = anchor?.parentNode || appMain;
-        const placementChanged = lastToolsPlacement.target !== target || lastToolsPlacement.anchor !== anchor || sectionTools.parentNode !== placementParent;
-        if(placementChanged){
-          if(anchor){
-            anchor.insertAdjacentElement('afterend', sectionTools);
-          }else{
-            placementParent.append(sectionTools);
-          }
-          lastToolsPlacement = { target, anchor };
-        }
-        sectionTools.hidden = false;
-        sectionTools.dataset.activeSection = target;
-        if(sectionToolsHeading){
-          const label = navLabels.get(target) || 'Current Section';
-          sectionToolsHeading.textContent = `${label} – Output & Session`;
-        }
-      };
       const isNaturallyFocusable = el => {
         if(!el) return false;
         return el.matches('a[href], button, input, textarea, select, summary, [tabindex]:not([tabindex="-1"])');
@@ -669,9 +647,7 @@
       let currentTarget = null;
       const showTarget = (target, { focus } = { focus: true }) => {
         if(!target || !groups.has(target)) return;
-        if(sectionTools) sectionTools.hidden = true;
         if(currentTarget === target){
-          if(sectionTools) placeSectionTools(target);
           if(focus) focusSection(target);
           return;
         }
@@ -692,13 +668,9 @@
         });
         navButtons.forEach(btn => {
           const active = btn.dataset.sectionTarget === target;
-          if (active) {
-            btn.setAttribute('aria-current', 'page');
-          } else {
-            btn.removeAttribute('aria-current');
-          }
+          btn.setAttribute('aria-current', active ? 'true' : 'false');
+          btn.setAttribute('aria-expanded', active ? 'true' : 'false');
         });
-        if(sectionTools) placeSectionTools(target);
         currentTarget = target;
         if(document.body){ document.body.dataset.activeSection = target; }
         if(focus) focusSection(target);
@@ -707,6 +679,12 @@
         btn.addEventListener('click', event => {
           event.preventDefault();
           showTarget(btn.dataset.sectionTarget, { focus: true });
+        });
+        btn.addEventListener('keydown', event => {
+          if(event.key === 'Enter' || event.key === ' '){
+            event.preventDefault();
+            showTarget(btn.dataset.sectionTarget, { focus: true });
+          }
         });
       });
       showTarget(navButtons[0].dataset.sectionTarget, { focus: false });
@@ -1223,6 +1201,7 @@
     let lastGeneratedBlob = null;
     let lastGeneratedName = 'Target-Filled.docx';
     let partTotalsTimer = null;
+    let dashboardTimer = null;
     function isValidDDMMYYYY(s){
       if(!/^\d{2}-\d{2}-\d{4}$/.test(s)) return false;
       const [dd,mm,yyyy] = s.split('-').map(x=>parseInt(x,10));
@@ -2127,7 +2106,7 @@
       }
       applyGroupVisibility();
       updatePart1TotalsFromParas();
-      updateDashboard();
+      scheduleDashboardUpdate();
       updatePreflightChecklist();
     }
 
@@ -2325,6 +2304,7 @@
       const recDisplay = recoveryHas ? formatCurrencyValue(recoveryCash + recoveryItc) : '—';
       summaryEl.innerHTML = `<span class="pill">Det ${detDisplay}</span><span class="pill">Rec ${recDisplay}</span><span class="pill ${statusClass}">${statusLabel}</span>`;
       updatePreflightChecklist();
+      scheduleDashboardUpdate();
     }
     function refreshAllParaSummaries(){
       document.querySelectorAll('.para-card').forEach(card => updateParaSummary(card));
@@ -2480,6 +2460,21 @@
     function schedulePartTotalsUpdate(){
       if(partTotalsTimer) clearTimeout(partTotalsTimer);
       partTotalsTimer = setTimeout(()=>{ partTotalsTimer = null; updatePart1TotalsFromParas(); }, 200);
+    }
+    function scheduleDashboardUpdate(){
+      if(typeof requestAnimationFrame === 'function'){
+        if(dashboardTimer && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(dashboardTimer);
+        dashboardTimer = requestAnimationFrame(()=>{
+          dashboardTimer = null;
+          updateDashboard();
+        });
+      }else{
+        if(dashboardTimer) clearTimeout(dashboardTimer);
+        dashboardTimer = setTimeout(()=>{
+          dashboardTimer = null;
+          updateDashboard();
+        }, 100);
+      }
     }
     function setFieldValue(id, value){ const el = $(id); if(el){ el.value = value; } }
     function updatePart1TotalsFromParas(){
@@ -2770,24 +2765,53 @@
     function wpTable(doc, matrix, opts={}){
       const tbl = doc.createElementNS(WNS,'w:tbl');
       const tblPr = doc.createElementNS(WNS,'w:tblPr');
+      const normalizedRows = [];
+      let maxCols = 0;
+      const sourceRows = Array.isArray(matrix) ? matrix : [];
+      function normalizeCell(cell){
+        if(cell && typeof cell === 'object' && !Array.isArray(cell)){
+          const text = (cell.text != null) ? String(cell.text) : '';
+          let colspan = parseInt(cell.colspan, 10);
+          let rowspan = parseInt(cell.rowspan, 10);
+          if(!Number.isFinite(colspan) || colspan < 1) colspan = 1;
+          if(!Number.isFinite(rowspan) || rowspan < 1) rowspan = 1;
+          let vMerge = cell.vMerge;
+          if(rowspan > 1 && vMerge !== 'restart' && vMerge !== 'continue') vMerge = 'restart';
+          if(vMerge !== 'restart' && vMerge !== 'continue') vMerge = null;
+          return { text, colspan, rowspan, vMerge, isPlaceholder: !!cell.isPlaceholder };
+        }
+        return { text: cell == null ? '' : String(cell), colspan: 1, rowspan: 1, vMerge: null, isPlaceholder: false };
+      }
+      for(const row of sourceRows){
+        const rowArray = Array.isArray(row) ? row : [row];
+        const normalized = [];
+        let width = 0;
+        for(const cell of rowArray){
+          const norm = normalizeCell(cell);
+          width += norm.colspan;
+          normalized.push(norm);
+        }
+        if(normalized.length){
+          normalizedRows.push(normalized);
+          if(width > maxCols) maxCols = width;
+        }
+      }
+      if(maxCols === 0) maxCols = 1;
       // Configure table width and layout
       if(opts && opts.autoFitContents){
-        // Match Word's AutoFit to Contents: prefer auto table width, no tblLayout override
         const tblW = doc.createElementNS(WNS,'w:tblW');
         tblW.setAttributeNS(WNS,'w:type','auto');
         tblW.setAttributeNS(WNS,'w:w','0');
         tblPr.appendChild(tblW);
       }else{
-        // Default (AutoFit to window): set preferred width 100% and explicit autofit layout
         const tblW = doc.createElementNS(WNS,'w:tblW');
         tblW.setAttributeNS(WNS,'w:type','pct');
-        tblW.setAttributeNS(WNS,'w:w','5000'); // 100%
+        tblW.setAttributeNS(WNS,'w:w','5000');
         tblPr.appendChild(tblW);
         const tblLayout = doc.createElementNS(WNS,'w:tblLayout');
         tblLayout.setAttributeNS(WNS,'w:type', (opts && opts.equalCols) ? 'fixed' : 'autofit');
         tblPr.appendChild(tblLayout);
       }
-      // Borders: single line for all cells
       const borders = doc.createElementNS(WNS,'w:tblBorders');
       const sides = ['top','left','bottom','right','insideH','insideV'];
       for(const side of sides){
@@ -2798,9 +2822,7 @@
         borders.appendChild(b);
       }
       tblPr.appendChild(borders);
-      // Build a grid for column count hint (Word recalculates widths when auto-fitting)
       const tblGrid = doc.createElementNS(WNS,'w:tblGrid');
-      let maxCols = 0; for(const row of matrix){ if(row.length>maxCols) maxCols = row.length; }
       for(let i=0;i<maxCols;i++){
         const gc = doc.createElementNS(WNS,'w:gridCol');
         gc.setAttributeNS(WNS,'w:w', (opts && opts.equalCols) ? '1000' : (opts && opts.autoFitContents ? '100' : '200'));
@@ -2808,22 +2830,35 @@
       }
       tbl.appendChild(tblPr);
       tbl.appendChild(tblGrid);
-      for(const row of matrix){
+      for(const row of normalizedRows){
         const tr = doc.createElementNS(WNS,'w:tr');
-        for(const cellText of row){
+        for(const cell of row){
           const tc = doc.createElementNS(WNS,'w:tc');
-          // Center align horizontally and vertically, font Aptos, size 10pt
           const tcPr = doc.createElementNS(WNS,'w:tcPr');
-          const vAlign = doc.createElementNS(WNS,'w:vAlign'); vAlign.setAttributeNS(WNS,'w:val','center'); tcPr.appendChild(vAlign);
+          const vAlign = doc.createElementNS(WNS,'w:vAlign');
+          vAlign.setAttributeNS(WNS,'w:val','center');
+          tcPr.appendChild(vAlign);
           if(opts && opts.autoFitContents){
-            // Hint no preferred width on cells (auto)
             const tcW = doc.createElementNS(WNS,'w:tcW');
             tcW.setAttributeNS(WNS,'w:type','auto');
             tcW.setAttributeNS(WNS,'w:w','0');
             tcPr.appendChild(tcW);
           }
+          if(cell.colspan && cell.colspan > 1){
+            const gridSpan = doc.createElementNS(WNS,'w:gridSpan');
+            gridSpan.setAttributeNS(WNS,'w:val', String(cell.colspan));
+            tcPr.appendChild(gridSpan);
+          }
+          if(cell.vMerge){
+            const vMerge = doc.createElementNS(WNS,'w:vMerge');
+            if(cell.vMerge === 'restart' || cell.vMerge === 'continue'){
+              vMerge.setAttributeNS(WNS,'w:val', cell.vMerge);
+            }
+            tcPr.appendChild(vMerge);
+          }
           tc.appendChild(tcPr);
-          const p = wpParagraph(doc, String(cellText||''), { align:'center', font:'Aptos', size:20, noSpacing: !!(opts && opts.noSpacing) });
+          const text = cell.text || '';
+          const p = wpParagraph(doc, String(text), { align:'center', font:'Aptos', size:20, noSpacing: !!(opts && opts.noSpacing) });
           tc.appendChild(p);
           tr.appendChild(tc);
         }
@@ -2872,7 +2907,7 @@
     }
 
     // Parse GIST/Verification HTML into ordered blocks, preserving tables even inside wrappers
-    // Output shape: [{type:'p', text}, {type:'table', rows:[[]]}]
+    // Output shape: [{type:'p', text}, {type:'table', rows:[[ {text, colspan, rowspan, vMerge?} ]]}]
     function extractGistBlocksFromHtml(html){
       const blocks = [];
       if(!html) return blocks;
@@ -2881,6 +2916,74 @@
       function addParagraph(text){
         const t = (text||'').replace(/\u00A0/g,' ').trim();
         if(t) blocks.push({ type:'p', text:t });
+      }
+      function buildCellDescriptor(cell){
+        const tagName = cell.tagName.toLowerCase();
+        const text = (cell.textContent || '').replace(/\u00A0/g,' ').trim();
+        let colspan = parseInt(cell.getAttribute('colspan') || '1', 10);
+        let rowspan = parseInt(cell.getAttribute('rowspan') || '1', 10);
+        if(!Number.isFinite(colspan) || colspan < 1) colspan = 1;
+        if(!Number.isFinite(rowspan) || rowspan < 1) rowspan = 1;
+        const descriptor = { type: tagName, text, colspan, rowspan };
+        if(rowspan > 1) descriptor.vMerge = 'restart';
+        return descriptor;
+      }
+      function buildPlaceholderCell(info){
+        return {
+          type: info.type || 'td',
+          text: '',
+          colspan: 1,
+          rowspan: 1,
+          vMerge: 'continue',
+          isPlaceholder: true
+        };
+      }
+      function buildTableRows(table){
+        const rows = [];
+        const pendingRowspans = [];
+        const rowElements = Array.from(table.querySelectorAll('tr')).filter(tr => tr.closest('table') === table);
+        for(const tr of rowElements){
+          const rowCells = [];
+          let colIndex = 0;
+          const cellElements = Array.from(tr.children).filter(el => {
+            const tag = el.tagName ? el.tagName.toLowerCase() : '';
+            return tag === 'td' || tag === 'th';
+          });
+          function flushPending(){
+            while(pendingRowspans[colIndex] && pendingRowspans[colIndex].remaining > 0){
+              const info = pendingRowspans[colIndex];
+              rowCells.push(buildPlaceholderCell(info));
+              info.remaining -= 1;
+              if(info.remaining <= 0){
+                delete pendingRowspans[colIndex];
+              }
+              colIndex += 1;
+            }
+          }
+          flushPending();
+          for(const cell of cellElements){
+            flushPending();
+            const desc = buildCellDescriptor(cell);
+            rowCells.push(desc);
+            const spanCols = desc.colspan || 1;
+            const spanRows = desc.rowspan || 1;
+            if(spanRows > 1){
+              desc.vMerge = desc.vMerge || 'restart';
+              for(let offset=0; offset<spanCols; offset++){
+                const idx = colIndex + offset;
+                pendingRowspans[idx] = {
+                  remaining: spanRows - 1,
+                  type: desc.type || 'td'
+                };
+              }
+            }
+            colIndex += spanCols;
+            flushPending();
+          }
+          flushPending();
+          if(rowCells.length) rows.push(rowCells);
+        }
+        return rows;
       }
       function collect(node){
         if(!node) return;
@@ -2891,11 +2994,7 @@
         if(node.nodeType !== 1) return;
         const tag = node.tagName.toLowerCase();
         if(tag === 'table'){
-          const rows = [];
-          for(const tr of node.querySelectorAll('tr')){
-            const cells = Array.from(tr.querySelectorAll('th,td')).map(c=>c.textContent.replace(/\u00A0/g,' ').trim());
-            rows.push(cells);
-          }
+          const rows = buildTableRows(node);
           if(rows.length) blocks.push({ type:'table', rows });
           return;
         }
@@ -2908,12 +3007,10 @@
           }
           return;
         }
-        // For wrappers like div/p/section/spans etc., if they contain tables, walk children to preserve order
         const hasTable = node.querySelector && node.querySelector('table');
         if(hasTable){
           for(const child of Array.from(node.childNodes)) collect(child);
         }else{
-          // No table inside: treat entire node as a paragraph
           addParagraph(node.textContent||'');
         }
       }

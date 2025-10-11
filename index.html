@@ -2097,7 +2097,7 @@
     $('addMinorRow').onclick = ()=> addRow({}, { minor:true });
     $('clearRows').onclick = ()=> {
       if(!window.confirm('This will remove all summary entries. Do you want to continue?')) return;
-      parasContainer.innerHTML='';
+      parasContainer.replaceChildren();
       renumberParas();
     };
 

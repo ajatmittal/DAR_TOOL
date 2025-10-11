@@ -186,6 +186,7 @@
   </style>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body>
   <div class="app-shell">
@@ -594,6 +595,7 @@
       <div class="row" style="gap:8px; align-items:center">
         <button id="saveSession" class="secondary" type="button">Save Session</button>
         <button id="loadSessionBtn" class="secondary" type="button">Load Session</button>
+        <button id="downloadExcel" class="secondary" type="button">Download Excel</button>
         <input id="loadSessionFile" type="file" accept="application/json,.json" style="display:none" />
         <span class="muted">Save your progress to a JSON file or restore it later.</span>
       </div>
@@ -3167,6 +3169,107 @@
       }
       return { version: 1, fields, totals, paras, risks };
     }
+
+    function gistHtmlToPlain(html){
+      if(!html) return '';
+      const tmp = document.createElement('div');
+      tmp.innerHTML = html;
+      const text = tmp.textContent || tmp.innerText || '';
+      return text.replace(/\s+/g, ' ').trim();
+    }
+
+    function flattenSessionForExcel(existingSession){
+      const snapshot = existingSession || collectSession();
+      if(!snapshot){
+        return [];
+      }
+      const fields = snapshot.fields || {};
+      const totals = snapshot.totals || {};
+      const aggregates = (typeof computeDashboardAggregates === 'function') ? computeDashboardAggregates() : null;
+      const row = {
+        'Session Version': snapshot.version ?? '',
+        'Unit Name': fields.f_name || '',
+        'GSTIN': fields.f_gstin || '',
+        'Division/Range': fields.f_division || '',
+        'Category': fields.f_category || '',
+        'Audit Type': fields.f_type || '',
+        'Product/Service': fields.f_product || '',
+        'Tariff Item': fields.f_tariff || '',
+        'Audit Period': fields.f_period || '',
+        'Address': fields.f_address || '',
+        'Group': fields.f_group || '',
+        'Circle': fields.f_circle || '',
+        'Officers': fields.f_officers || '',
+        'A.R. Number': fields.f_ar || '',
+        'MCM Date': fields.f_mcm || '',
+        'Issuing Name': fields.f_iss_name || '',
+        'Issuing Designation': fields.f_iss_desig || '',
+        'Issuing Circle': fields.f_iss_circle || '',
+        'Audit Dates': Array.isArray(fields.auditDates) ? fields.auditDates.join(', ') : ''
+      };
+      if(totals.rev){
+        row['Revenue GST'] = totals.rev.gst || '';
+        row['Revenue Interest'] = totals.rev.int || '';
+        row['Revenue Penalty'] = totals.rev.pen || '';
+        row['Revenue Late Fee'] = totals.rev.late || '';
+        row['Revenue Total'] = totals.rev.sum || '';
+      }
+      if(totals.vol){
+        row['Voluntary GST Cash'] = totals.vol.gst?.cash || '';
+        row['Voluntary GST ITC'] = totals.vol.gst?.itc || '';
+        row['Voluntary GST Total'] = totals.vol.gst?.total || '';
+        row['Voluntary Interest Cash'] = totals.vol.int?.cash || '';
+        row['Voluntary Interest Total'] = totals.vol.int?.total || '';
+        row['Voluntary Penalty Cash'] = totals.vol.pen?.cash || '';
+        row['Voluntary Penalty Total'] = totals.vol.pen?.total || '';
+        row['Voluntary Late Fee Cash'] = totals.vol.late?.cash || '';
+        row['Voluntary Late Fee Total'] = totals.vol.late?.total || '';
+        row['Voluntary Sum Cash'] = totals.vol.sums?.cash || '';
+        row['Voluntary Sum ITC'] = totals.vol.sums?.itc || '';
+        row['Voluntary Sum Total'] = totals.vol.sums?.total || '';
+      }
+      if(aggregates){
+        row['Dashboard Total Paras'] = aggregates.totalParas ?? '';
+        row['Dashboard Total Detection'] = aggregates.totalDetection ?? '';
+        row['Dashboard Total Recovery'] = aggregates.totalRecovery ?? '';
+        row['Dashboard Flags'] = (aggregates.flags && aggregates.flags.length) ? aggregates.flags.join(' | ') : '';
+      }
+      if(aggregates && Array.isArray(aggregates.perParas)){
+        aggregates.perParas.forEach((para, idx) => {
+          const n = idx + 1;
+          row[`Dashboard Para ${n} Number`] = para.sl || '';
+          row[`Dashboard Para ${n} Type`] = para.type || '';
+          row[`Dashboard Para ${n} Detection`] = para.detection ?? '';
+          row[`Dashboard Para ${n} Recovery`] = para.recovery ?? '';
+          row[`Dashboard Para ${n} Gist`] = para.gist || '';
+        });
+      }
+      if(Array.isArray(snapshot.paras)){
+        snapshot.paras.forEach((para, idx) => {
+          const n = idx + 1;
+          row[`Para ${n} Number`] = para.no || '';
+          row[`Para ${n} Minor`] = para.minor ? 'Yes' : 'No';
+          row[`Para ${n} Gist HTML`] = para.gistHtml || '';
+          row[`Para ${n} Gist Text`] = gistHtmlToPlain(para.gistHtml || '');
+          row[`Para ${n} Revenue Notes`] = para.rev || '';
+          row[`Para ${n} Revenue Structured`] = para.revStructured ? JSON.stringify(para.revStructured) : '';
+          row[`Para ${n} Agreement Display`] = para.agree || '';
+          row[`Para ${n} Agreement Status`] = para.agreeStatus || '';
+          row[`Para ${n} Agreement Notes`] = para.agreeNotes || '';
+          row[`Para ${n} Audit Comments`] = para.audit || '';
+        });
+      }
+      if(Array.isArray(snapshot.risks)){
+        snapshot.risks.forEach((risk, idx) => {
+          const n = idx + 1;
+          row[`Risk ${n} Parameter`] = risk.param || '';
+          row[`Risk ${n} Description`] = risk.desc || '';
+          row[`Risk ${n} Verification HTML`] = risk.verifHtml || '';
+          row[`Risk ${n} Verification Text`] = gistHtmlToPlain(risk.verifHtml || '');
+        });
+      }
+      return [row];
+    }
     function loadAutosaves(){
       if(typeof localStorage === 'undefined') return [];
       try{
@@ -4138,6 +4241,30 @@
         showToast('error', 'Failed to save session: ' + err.message);
       }
     });
+    const downloadExcelBtn = $('downloadExcel');
+    if(downloadExcelBtn){
+      downloadExcelBtn.addEventListener('click', () => {
+        try{
+          if(typeof XLSX === 'undefined' || !XLSX.utils){
+            throw new Error('Excel export library not available.');
+          }
+          const rows = flattenSessionForExcel();
+          if(!Array.isArray(rows) || !rows.length){
+            throw new Error('No session data available to export.');
+          }
+          const worksheet = XLSX.utils.json_to_sheet(rows);
+          const workbook = XLSX.utils.book_new();
+          XLSX.utils.book_append_sheet(workbook, worksheet, 'DAR Session');
+          XLSX.writeFile(workbook, 'dar-session.xlsx');
+          setStatus('Excel download started.');
+          showToast('success', 'Session exported to dar-session.xlsx');
+        }catch(err){
+          console.error('Excel export failed:', err);
+          setStatus('Excel export failed.');
+          showToast('error', 'Failed to export Excel: ' + (err?.message || err));
+        }
+      });
+    }
     if($('loadSession')) $('loadSession').addEventListener('click', () => {
       if($('loadSessionFile')) $('loadSessionFile').click();
     });

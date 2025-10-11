@@ -7,6 +7,8 @@
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Arial; margin: 24px; }
     h1 { margin: 0 0 12px; font-size: 28px; text-align: center; }
+    .app-shell { display: grid; grid-template-columns: minmax(220px, 260px) minmax(0, 1fr); gap: 24px; align-items: flex-start; }
+    .app-main { min-width: 0; }
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
     .card { border: 1px solid #d1d5db; border-radius: 10px; padding: 16px; margin-bottom: 16px; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
     label { font-weight: 600; display: block; margin-bottom: 4px; }
@@ -113,16 +115,22 @@
     .rev-summary { display: flex; justify-content: space-between; align-items: center; background: #e5e7eb; color: #1f2937; padding: 6px 8px; border-radius: 6px; margin-bottom: 6px; font-size: 13px; }
     .rev-summary label { font-weight: 600; }
     .rev-summary input { width: 140px; border: 1px solid #cbd5f5; border-radius: 4px; padding: 4px 6px; background: #f9fafb; color: #1f2937; text-align: right; cursor: not-allowed; }
-    .sticky-nav { position: sticky; top: 0; z-index: 120; display: flex; gap: 12px; flex-wrap: wrap; background: #ffffff; padding: 10px 16px; margin: 12px 0; border: 1px solid #e5e7eb; border-radius: 10px; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06); }
-    .sticky-nav .nav-link { color: #2563eb; font-weight: 600; text-decoration: none; padding: 6px 12px; border-radius: 999px; transition: background 0.15s ease, color 0.15s ease; }
+    .sticky-nav { position: sticky; top: 24px; z-index: 120; display: flex; flex-direction: column; gap: 8px; background: #ffffff; padding: 16px; border: 1px solid #e5e7eb; border-radius: 12px; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06); max-height: calc(100vh - 48px); overflow-y: auto; }
+    .sticky-nav .nav-link { display: block; width: 100%; border: 0; background: transparent; color: #2563eb; font-weight: 600; text-align: left; padding: 8px 12px; border-radius: 999px; cursor: pointer; transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease; font-family: inherit; font-size: 14px; }
     .sticky-nav .nav-link:hover { background: #eff6ff; }
     .sticky-nav .nav-link:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
-    .totals-ribbon { position: sticky; top: 62px; z-index: 110; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px 16px; display: flex; gap: 16px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-bottom: 16px; box-shadow: 0 6px 16px rgba(15,23,42,0.05); }
+    .sticky-nav .nav-link[aria-current="true"], .sticky-nav .nav-link[aria-expanded="true"] { background: #2563eb; color: #ffffff; box-shadow: 0 8px 16px rgba(37, 99, 235, 0.25); }
+    .totals-ribbon { position: sticky; top: 24px; z-index: 110; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px 16px; display: flex; gap: 16px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-bottom: 16px; box-shadow: 0 6px 16px rgba(15,23,42,0.05); }
     .totals-ribbon .totals-item { display: flex; flex-direction: column; min-width: 140px; }
     .totals-ribbon .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #475569; }
     .totals-ribbon .value { font-size: 20px; font-weight: 600; color: #1f2937; }
+    @media (max-width: 1024px) {
+      .app-shell { grid-template-columns: minmax(0, 1fr); }
+      .sticky-nav { position: sticky; top: 0; flex-direction: row; flex-wrap: wrap; align-items: center; max-height: none; overflow: visible; margin: 0 0 16px 0; }
+    }
     @media (max-width: 720px) {
-      .sticky-nav { position: static; }
+      .sticky-nav { overflow-x: auto; flex-wrap: nowrap; gap: 8px; }
+      .sticky-nav .nav-link { flex: 0 0 auto; }
       .totals-ribbon { position: static; }
     }
 
@@ -172,425 +180,429 @@
     .dashboard-flags { margin-top: 12px; }
     .dashboard-flags .flag { background: #fef2f2; color: #b91c1c; padding: 8px; border-radius: 6px; margin-bottom: 8px; font-size: 14px; }
     .dashboard-flags .flag:last-child { margin-bottom: 0; }
+    .section-hidden { display: none !important; }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
 </head>
 <body>
-  <h1>
-    DAR Generator for CGST Audit Thane
-    <div class="muted" style="font-size:14px">(All Part-I fields except A.R. No. are mandatory)</div>
-  </h1>
+  <div class="app-shell">
+    <nav class="sticky-nav" aria-label="Section navigation">
+      <button type="button" class="nav-link" data-section-target="part1" aria-controls="section-part1" aria-expanded="false">Part-I</button>
+      <button type="button" class="nav-link" data-section-target="detection" aria-controls="section-detection" aria-expanded="false">Detection &amp; Recovery</button>
+      <button type="button" class="nav-link" data-section-target="summary" aria-controls="section-summary" aria-expanded="false">Summary</button>
+      <button type="button" class="nav-link" data-section-target="risks" aria-controls="section-risks" aria-expanded="false">Risk Flags</button>
+      <button type="button" class="nav-link" data-section-target="dashboard" aria-controls="dashboard-ribbon" aria-expanded="false">Dashboard</button>
+      <button type="button" class="nav-link" data-section-target="session" aria-controls="section-session" aria-expanded="false">Output &amp; Session</button>
+    </nav>
+    <main id="mainContent" class="app-main" aria-labelledby="pageTitle">
+        <h1 id="pageTitle">
+          DAR Generator for CGST Audit Thane
+          <div class="muted" style="font-size:14px">(All Part-I fields except A.R. No. are mandatory)</div>
+        </h1>
 
-  <nav class="sticky-nav" aria-label="Section navigation">
-    <a class="nav-link" href="#section-part1">Part-I</a>
-    <a class="nav-link" href="#section-detection">Detection & Recovery</a>
-    <a class="nav-link" href="#section-summary">Summary</a>
-    <a class="nav-link" href="#section-risks">Risk Flags</a>
-    <a class="nav-link" href="#dashboard-ribbon">Dashboard</a>
-    <a class="nav-link" href="#section-session">Session Tools</a>
-  </nav>
+        <section id="validationSummary" class="validation-summary" role="alert" aria-live="assertive" hidden tabindex="-1">
+      <h2>Review required fields</h2>
+      <p class="muted" style="color:#7f1d1d; margin-bottom:8px">Resolve the issues below before generating the DAR.</p>
+      <ul id="validationList"></ul>
+    </section>
 
-  <section id="validationSummary" class="validation-summary" role="alert" aria-live="assertive" hidden tabindex="-1">
-    <h2>Review required fields</h2>
-    <p class="muted" style="color:#7f1d1d; margin-bottom:8px">Resolve the issues below before generating the DAR.</p>
-    <ul id="validationList"></ul>
-  </section>
-
-  <div id="totalsRibbon" class="totals-ribbon" role="status" aria-live="polite">
-    <div class="totals-item">
-      <span class="label">Detection Total</span>
-      <span class="value" id="ribbon-det-total">₹0</span>
-    </div>
-    <div class="totals-item">
-      <span class="label">Interest Total</span>
-      <span class="value" id="ribbon-det-interest">₹0</span>
-    </div>
-    <div class="totals-item">
-      <span class="label">Recovery Cash</span>
-      <span class="value" id="ribbon-rec-cash">₹0</span>
-    </div>
-    <div class="totals-item">
-      <span class="label">Recovery ITC</span>
-      <span class="value" id="ribbon-rec-itc">₹0</span>
-    </div>
-  </div>
-
-  <div class="card" id="section-intro">
-    <div class="grid">
-      <div>
-        <label>DAR Generator for CGST Audit Thane</label>
-        <div class="muted">(All Part-I fields except A.R. No. are mandatory)</div>
+    <div id="totalsRibbon" class="totals-ribbon" role="status" aria-live="polite" data-section-group="detection">
+      <div class="totals-item">
+        <span class="label">Detection Total</span>
+        <span class="value" id="ribbon-det-total">₹0</span>
+      </div>
+      <div class="totals-item">
+        <span class="label">Interest Total</span>
+        <span class="value" id="ribbon-det-interest">₹0</span>
+      </div>
+      <div class="totals-item">
+        <span class="label">Recovery Cash</span>
+        <span class="value" id="ribbon-rec-cash">₹0</span>
+      </div>
+      <div class="totals-item">
+        <span class="label">Recovery ITC</span>
+        <span class="value" id="ribbon-rec-itc">₹0</span>
       </div>
     </div>
-  </div>
 
-  <div class="card" id="section-part1">
-    <h3>PART-I</h3>
-    <div class="grid">
-      <div class="field-wrapper" data-field-wrapper="f_name">
-        <label for="f_name">Name of Unit <span class="required-indicator" aria-hidden="true">*</span></label>
-        <div class="field-control">
-          <input id="f_name" type="text" required aria-required="true" />
-          <span class="field-tick" aria-hidden="true">✓</span>
+    <div class="card" id="section-intro" data-section-group="part1">
+      <div class="grid">
+        <div>
+          <label>DAR Generator for CGST Audit Thane</label>
+          <div class="muted">(All Part-I fields except A.R. No. are mandatory)</div>
         </div>
       </div>
-      <div class="field-wrapper" data-field-wrapper="f_gstin">
-        <label for="f_gstin">Registration No. (GST, ECC, STC) <span class="required-indicator" aria-hidden="true">*</span></label>
-        <div class="field-control">
-          <input id="f_gstin" type="text" required aria-required="true" />
-          <span class="field-tick" aria-hidden="true">✓</span>
-        </div>
-      </div>
-      <div class="field-wrapper" data-field-wrapper="f_division">
-        <label for="f_division">Commissionerate/Division/Range <span class="required-indicator" aria-hidden="true">*</span></label>
-        <div class="field-control">
-          <input id="f_division" type="text" required aria-required="true" />
-          <span class="field-tick" aria-hidden="true">✓</span>
-        </div>
-      </div>
-      <div class="field-wrapper" data-field-wrapper="f_category">
-        <label for="f_category_select">Category <span class="required-indicator" aria-hidden="true">*</span></label>
-        <div class="field-control">
-          <div class="row" style="flex-wrap:wrap; gap:8px; align-items:center;">
-            <select id="f_category_select" aria-required="true" style="min-width:160px;">
-              <option value="" disabled selected>Select Category</option>
-              <option value="Trader">Trader</option>
-              <option value="Manufacturer">Manufacturer</option>
-              <option value="Service Provider">Service Provider</option>
-              <option value="ISD">ISD</option>
-              <option value="Other">Other</option>
-            </select>
-            <input id="f_category_other" type="text" placeholder="Specify other category" style="display:none; flex:1; min-width:200px;" />
+    </div>
+
+    <div class="card" id="section-part1" data-section-group="part1">
+      <h3 data-section-focus="part1">PART-I</h3>
+      <div class="grid">
+        <div class="field-wrapper" data-field-wrapper="f_name">
+          <label for="f_name">Name of Unit <span class="required-indicator" aria-hidden="true">*</span></label>
+          <div class="field-control">
+            <input id="f_name" type="text" required aria-required="true" />
+            <span class="field-tick" aria-hidden="true">✓</span>
           </div>
-          <input id="f_category" type="hidden" />
-          <span class="field-tick" aria-hidden="true">✓</span>
         </div>
-      </div>
-      <div class="field-wrapper" data-field-wrapper="f_type">
-        <label for="f_type">Type <span class="required-indicator" aria-hidden="true">*</span></label>
-        <div class="field-control">
-          <select id="f_type" required aria-required="true">
-            <option value="" disabled selected>Select Type</option>
-            <option value="Small">Small</option>
-            <option value="Medium">Medium</option>
-            <option value="Large">Large</option>
-          </select>
-          <span class="field-tick" aria-hidden="true">✓</span>
-        </div>
-      </div>
-      <div class="field-wrapper" data-field-wrapper="f_product">
-        <label for="f_product">Description of Goods/Services Supplied <span class="required-indicator" aria-hidden="true">*</span></label>
-        <div class="field-control">
-          <input id="f_product" type="text" required aria-required="true" />
-          <span class="field-tick" aria-hidden="true">✓</span>
-        </div>
-      </div>
-      <div class="field-wrapper" data-field-wrapper="f_tariff">
-        <label for="f_tariff">Tariff Item (Fill HSN/SAC here) <span class="required-indicator" aria-hidden="true">*</span></label>
-        <div class="field-control">
-          <input id="f_tariff" type="text" required aria-required="true" />
-          <span class="field-tick" aria-hidden="true">✓</span>
-        </div>
-      </div>
-      <div class="field-wrapper" data-field-wrapper="f_period">
-        <label for="f_period_start">Period Covered <span class="required-indicator" aria-hidden="true">*</span></label>
-        <div class="field-control">
-          <div class="row" style="flex-wrap:wrap; gap:8px; align-items:center;">
-            <select id="f_period_start" style="min-width:160px;">
-              <option value="" disabled selected>From (FY)</option>
-            </select>
-            <span class="muted" aria-hidden="true">to</span>
-            <select id="f_period_end" style="min-width:160px;">
-              <option value="" disabled selected>To (FY)</option>
-            </select>
+        <div class="field-wrapper" data-field-wrapper="f_gstin">
+          <label for="f_gstin">Registration No. (GST, ECC, STC) <span class="required-indicator" aria-hidden="true">*</span></label>
+          <div class="field-control">
+            <input id="f_gstin" type="text" required aria-required="true" />
+            <span class="field-tick" aria-hidden="true">✓</span>
           </div>
-          <input id="f_period" type="hidden" />
-          <span class="field-tick" aria-hidden="true">✓</span>
         </div>
-      </div>
-      <div class="field-wrapper" data-field-wrapper="f_audit_dates">
-        <label for="f_audit_date_input">Date of Visit <span class="required-indicator" aria-hidden="true">*</span></label>
-        <div class="field-control align-top">
-          <div id="auditDates" class="date-multi">
-            <div class="row" style="gap:6px">
-              <input id="f_audit_date_input" type="date" />
-              <button class="secondary" id="addAuditDateBtn" type="button">Add Date</button>
+        <div class="field-wrapper" data-field-wrapper="f_division">
+          <label for="f_division">Commissionerate/Division/Range <span class="required-indicator" aria-hidden="true">*</span></label>
+          <div class="field-control">
+            <input id="f_division" type="text" required aria-required="true" />
+            <span class="field-tick" aria-hidden="true">✓</span>
+          </div>
+        </div>
+        <div class="field-wrapper" data-field-wrapper="f_category">
+          <label for="f_category_select">Category <span class="required-indicator" aria-hidden="true">*</span></label>
+          <div class="field-control">
+            <div class="row" style="flex-wrap:wrap; gap:8px; align-items:center;">
+              <select id="f_category_select" aria-required="true" style="min-width:160px;">
+                <option value="" disabled selected>Select Category</option>
+                <option value="Trader">Trader</option>
+                <option value="Manufacturer">Manufacturer</option>
+                <option value="Service Provider">Service Provider</option>
+                <option value="ISD">ISD</option>
+                <option value="Other">Other</option>
+              </select>
+              <input id="f_category_other" type="text" placeholder="Specify other category" style="display:none; flex:1; min-width:200px;" />
             </div>
-            <div id="auditDateError" class="muted" style="color:#B91C1C; display:none; margin-top:4px"></div>
-            <div id="auditDatesList" class="row" style="gap:6px; margin-top:6px"></div>
-            <input id="f_audit_dates" type="hidden" />
+            <input id="f_category" type="hidden" />
+            <span class="field-tick" aria-hidden="true">✓</span>
           </div>
-          <span class="field-tick" aria-hidden="true">✓</span>
         </div>
-      </div>
-      <div class="field-wrapper" data-field-wrapper="f_ar">
-        <label for="f_ar">A.R. No.</label>
-        <div class="field-control">
-          <input id="f_ar" type="text" />
-          <span class="field-tick" aria-hidden="true">✓</span>
-        </div>
-      </div>
-      <div class="field-wrapper" data-field-wrapper="f_mcm">
-        <label for="f_mcm">MCM Date <span class="required-indicator" aria-hidden="true">*</span></label>
-        <div class="field-control">
-          <input id="f_mcm" type="date" required aria-required="true" />
-          <span class="field-tick" aria-hidden="true">✓</span>
-        </div>
-      </div>
-      <!-- Rows 15 and 16 are captured in dedicated nested tables below -->
-    </div>
-    <div class="field-wrapper" data-field-wrapper="f_address" style="margin-top:12px">
-      <label for="f_address">Address <span class="required-indicator" aria-hidden="true">*</span></label>
-      <div class="field-control align-top">
-        <textarea id="f_address" required aria-required="true"></textarea>
-        <span class="field-tick" aria-hidden="true">✓</span>
-      </div>
-    </div>
-    <div class="field-wrapper" data-field-wrapper="f_officers" style="margin-top:12px">
-      <label for="f_officers">Circle, Group and Officers <span class="required-indicator" aria-hidden="true">*</span></label>
-      <div class="circle-group-row">
-        <div class="field-wrapper circle-field" data-field-wrapper="f_circle">
-          <label for="f_circle" class="sub-label">Circle <span class="required-indicator" aria-hidden="true">*</span></label>
+        <div class="field-wrapper" data-field-wrapper="f_type">
+          <label for="f_type">Type <span class="required-indicator" aria-hidden="true">*</span></label>
           <div class="field-control">
-            <select id="f_circle" required aria-required="true">
-              <option value="">Select Circle</option>
-              <option value="I">I</option>
-              <option value="II">II</option>
-              <option value="III">III</option>
-              <option value="IV">IV</option>
-              <option value="V">V</option>
-              <option value="VI">VI</option>
-              <option value="VII">VII</option>
-              <option value="VIII">VIII</option>
-              <option value="IX">IX</option>
-              <option value="27 (HQ)">27 (HQ)</option>
+            <select id="f_type" required aria-required="true">
+              <option value="" disabled selected>Select Type</option>
+              <option value="Small">Small</option>
+              <option value="Medium">Medium</option>
+              <option value="Large">Large</option>
             </select>
             <span class="field-tick" aria-hidden="true">✓</span>
           </div>
         </div>
-        <div class="field-wrapper circle-field" data-field-wrapper="f_group">
-          <label for="f_group" class="sub-label">Group <span class="required-indicator" aria-hidden="true">*</span></label>
+        <div class="field-wrapper" data-field-wrapper="f_product">
+          <label for="f_product">Description of Goods/Services Supplied <span class="required-indicator" aria-hidden="true">*</span></label>
           <div class="field-control">
-            <select id="f_group" required aria-required="true">
-              <option value="">Select Group</option>
-              <option value="1">1</option>
-              <option value="2">2</option>
-              <option value="3">3</option>
-              <option value="4">4</option>
-              <option value="5">5</option>
-              <option value="6">6</option>
-              <option value="7">7</option>
-              <option value="8">8</option>
-              <option value="9">9</option>
-              <option value="10">10</option>
-              <option value="11">11</option>
-              <option value="12">12</option>
-              <option value="13">13</option>
-              <option value="14">14</option>
-              <option value="15">15</option>
-              <option value="16">16</option>
-              <option value="17">17</option>
-              <option value="18">18</option>
-              <option value="19">19</option>
-              <option value="20">20</option>
-              <option value="21">21</option>
-              <option value="22">22</option>
-              <option value="23">23</option>
-              <option value="24">24</option>
-              <option value="25">25</option>
-              <option value="26">26</option>
-              <option value="27 (HQ)">27 (HQ)</option>
-            </select>
+            <input id="f_product" type="text" required aria-required="true" />
             <span class="field-tick" aria-hidden="true">✓</span>
           </div>
         </div>
+        <div class="field-wrapper" data-field-wrapper="f_tariff">
+          <label for="f_tariff">Tariff Item (Fill HSN/SAC here) <span class="required-indicator" aria-hidden="true">*</span></label>
+          <div class="field-control">
+            <input id="f_tariff" type="text" required aria-required="true" />
+            <span class="field-tick" aria-hidden="true">✓</span>
+          </div>
+        </div>
+        <div class="field-wrapper" data-field-wrapper="f_period">
+          <label for="f_period_start">Period Covered <span class="required-indicator" aria-hidden="true">*</span></label>
+          <div class="field-control">
+            <div class="row" style="flex-wrap:wrap; gap:8px; align-items:center;">
+              <select id="f_period_start" style="min-width:160px;">
+                <option value="" disabled selected>From (FY)</option>
+              </select>
+              <span class="muted" aria-hidden="true">to</span>
+              <select id="f_period_end" style="min-width:160px;">
+                <option value="" disabled selected>To (FY)</option>
+              </select>
+            </div>
+            <input id="f_period" type="hidden" />
+            <span class="field-tick" aria-hidden="true">✓</span>
+          </div>
+        </div>
+        <div class="field-wrapper" data-field-wrapper="f_audit_dates">
+          <label for="f_audit_date_input">Date of Visit <span class="required-indicator" aria-hidden="true">*</span></label>
+          <div class="field-control align-top">
+            <div id="auditDates" class="date-multi">
+              <div class="row" style="gap:6px">
+                <input id="f_audit_date_input" type="date" />
+                <button class="secondary" id="addAuditDateBtn" type="button">Add Date</button>
+              </div>
+              <div id="auditDateError" class="muted" style="color:#B91C1C; display:none; margin-top:4px"></div>
+              <div id="auditDatesList" class="row" style="gap:6px; margin-top:6px"></div>
+              <input id="f_audit_dates" type="hidden" />
+            </div>
+            <span class="field-tick" aria-hidden="true">✓</span>
+          </div>
+        </div>
+        <div class="field-wrapper" data-field-wrapper="f_ar">
+          <label for="f_ar">A.R. No.</label>
+          <div class="field-control">
+            <input id="f_ar" type="text" />
+            <span class="field-tick" aria-hidden="true">✓</span>
+          </div>
+        </div>
+        <div class="field-wrapper" data-field-wrapper="f_mcm">
+          <label for="f_mcm">MCM Date <span class="required-indicator" aria-hidden="true">*</span></label>
+          <div class="field-control">
+            <input id="f_mcm" type="date" required aria-required="true" />
+            <span class="field-tick" aria-hidden="true">✓</span>
+          </div>
+        </div>
+        <!-- Rows 15 and 16 are captured in dedicated nested tables below -->
       </div>
-      <div class="field-control align-top" style="margin-top:8px">
-        <textarea id="f_officers" placeholder="List officers / team members" required aria-required="true"></textarea>
-        <span class="field-tick" aria-hidden="true">✓</span>
+      <div class="field-wrapper" data-field-wrapper="f_address" style="margin-top:12px">
+        <label for="f_address">Address <span class="required-indicator" aria-hidden="true">*</span></label>
+        <div class="field-control align-top">
+          <textarea id="f_address" required aria-required="true"></textarea>
+          <span class="field-tick" aria-hidden="true">✓</span>
+        </div>
+      </div>
+      <div class="field-wrapper" data-field-wrapper="f_officers" style="margin-top:12px">
+        <label for="f_officers">Circle, Group and Officers <span class="required-indicator" aria-hidden="true">*</span></label>
+        <div class="circle-group-row">
+          <div class="field-wrapper circle-field" data-field-wrapper="f_circle">
+            <label for="f_circle" class="sub-label">Circle <span class="required-indicator" aria-hidden="true">*</span></label>
+            <div class="field-control">
+              <select id="f_circle" required aria-required="true">
+                <option value="">Select Circle</option>
+                <option value="I">I</option>
+                <option value="II">II</option>
+                <option value="III">III</option>
+                <option value="IV">IV</option>
+                <option value="V">V</option>
+                <option value="VI">VI</option>
+                <option value="VII">VII</option>
+                <option value="VIII">VIII</option>
+                <option value="IX">IX</option>
+                <option value="27 (HQ)">27 (HQ)</option>
+              </select>
+              <span class="field-tick" aria-hidden="true">✓</span>
+            </div>
+          </div>
+          <div class="field-wrapper circle-field" data-field-wrapper="f_group">
+            <label for="f_group" class="sub-label">Group <span class="required-indicator" aria-hidden="true">*</span></label>
+            <div class="field-control">
+              <select id="f_group" required aria-required="true">
+                <option value="">Select Group</option>
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+                <option value="6">6</option>
+                <option value="7">7</option>
+                <option value="8">8</option>
+                <option value="9">9</option>
+                <option value="10">10</option>
+                <option value="11">11</option>
+                <option value="12">12</option>
+                <option value="13">13</option>
+                <option value="14">14</option>
+                <option value="15">15</option>
+                <option value="16">16</option>
+                <option value="17">17</option>
+                <option value="18">18</option>
+                <option value="19">19</option>
+                <option value="20">20</option>
+                <option value="21">21</option>
+                <option value="22">22</option>
+                <option value="23">23</option>
+                <option value="24">24</option>
+                <option value="25">25</option>
+                <option value="26">26</option>
+                <option value="27 (HQ)">27 (HQ)</option>
+              </select>
+              <span class="field-tick" aria-hidden="true">✓</span>
+            </div>
+          </div>
+        </div>
+        <div class="field-control align-top" style="margin-top:8px">
+          <textarea id="f_officers" placeholder="List officers / team members" required aria-required="true"></textarea>
+          <span class="field-tick" aria-hidden="true">✓</span>
+        </div>
       </div>
     </div>
-  </div>
 
-  <div class="card" id="section-detection">
-    <h3>Part-1 Detection and Recovery</h3>
-    <div class="muted" style="margin-bottom:8px">Exact match of nested tables inside Table 1 rows 15 and 16 in Target.docx</div>
-    <div class="grid" style="grid-template-columns: 1fr 1fr; gap:16px">
-      <div>
-        <label>Total Revenue Detection (Rs.)</label>
-        <table class="locked-table">
-          <thead>
-            <tr><th>Description</th><th>Amount (Rs.)</th></tr>
-          </thead>
-          <tbody id="rev_tbl">
-            <tr><td>GST</td><td><input type="text" id="rev_gst_amt" inputmode="decimal" pattern="([Nn][Qq])|[0-9.,]*" title="Auto-filled" readonly tabindex="-1"></td></tr>
-            <tr><td>Interest</td><td><input type="text" id="rev_int_amt" inputmode="decimal" pattern="([Nn][Qq])|[0-9.,]*" title="Auto-filled" readonly tabindex="-1"></td></tr>
-            <tr><td>Penalty</td><td><input type="text" id="rev_pen_amt" inputmode="decimal" pattern="([Nn][Qq])|[0-9.,]*" title="Auto-filled" readonly tabindex="-1"></td></tr>
-            <tr><td>Late Fee</td><td><input type="text" id="rev_late_amt" inputmode="decimal" pattern="([Nn][Qq])|[0-9.,]*" title="Auto-filled" readonly tabindex="-1"></td></tr>
-            <tr><td><b>Total</b></td><td><input type="text" id="rev_sum_amt" readonly tabindex="-1"></td></tr>
-          </tbody>
-        </table>
+    <div class="card" id="section-detection" data-section-group="detection">
+      <h3 data-section-focus="detection">Part-1 Detection and Recovery</h3>
+      <div class="muted" style="margin-bottom:8px">Exact match of nested tables inside Table 1 rows 15 and 16 in Target.docx</div>
+      <div class="grid" style="grid-template-columns: 1fr 1fr; gap:16px">
+        <div>
+          <label>Total Revenue Detection (Rs.)</label>
+          <table class="locked-table">
+            <thead>
+              <tr><th>Description</th><th>Amount (Rs.)</th></tr>
+            </thead>
+            <tbody id="rev_tbl">
+              <tr><td>GST</td><td><input type="text" id="rev_gst_amt" inputmode="decimal" pattern="([Nn][Qq])|[0-9.,]*" title="Auto-filled" readonly tabindex="-1"></td></tr>
+              <tr><td>Interest</td><td><input type="text" id="rev_int_amt" inputmode="decimal" pattern="([Nn][Qq])|[0-9.,]*" title="Auto-filled" readonly tabindex="-1"></td></tr>
+              <tr><td>Penalty</td><td><input type="text" id="rev_pen_amt" inputmode="decimal" pattern="([Nn][Qq])|[0-9.,]*" title="Auto-filled" readonly tabindex="-1"></td></tr>
+              <tr><td>Late Fee</td><td><input type="text" id="rev_late_amt" inputmode="decimal" pattern="([Nn][Qq])|[0-9.,]*" title="Auto-filled" readonly tabindex="-1"></td></tr>
+              <tr><td><b>Total</b></td><td><input type="text" id="rev_sum_amt" readonly tabindex="-1"></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div>
+          <label>Total Recoveries</label>
+          <table class="locked-table">
+            <thead>
+              <tr><th>Description</th><th>Cash</th><th>ITC</th><th>Total</th></tr>
+            </thead>
+            <tbody id="vol_tbl">
+              <tr><td>GST</td><td><input type="text" id="vol_gst_cash" inputmode="decimal" pattern="([Nn][Qq])|[0-9.,]*" title="Auto-filled" readonly tabindex="-1"></td><td><input type="text" id="vol_gst_itc" inputmode="decimal" pattern="([Nn][Qq])|[0-9.,]*" title="Auto-filled" readonly tabindex="-1"></td><td><input type="text" id="vol_gst_total" readonly tabindex="-1"></td></tr>
+              <tr><td>Interest</td><td><input type="text" id="vol_int_cash" inputmode="decimal" pattern="([Nn][Qq])|[0-9.,]*" title="Auto-filled" readonly tabindex="-1"></td><td><input type="text" id="vol_int_itc" readonly tabindex="-1"></td><td><input type="text" id="vol_int_total" readonly tabindex="-1"></td></tr>
+              <tr><td>Penalty</td><td><input type="text" id="vol_pen_cash" inputmode="decimal" pattern="([Nn][Qq])|[0-9.,]*" title="Auto-filled" readonly tabindex="-1"></td><td><input type="text" id="vol_pen_itc" readonly tabindex="-1"></td><td><input type="text" id="vol_pen_total" readonly tabindex="-1"></td></tr>
+              <tr><td>Late Fee</td><td><input type="text" id="vol_late_cash" inputmode="decimal" pattern="([Nn][Qq])|[0-9.,]*" title="Auto-filled" readonly tabindex="-1"></td><td><input type="text" id="vol_late_itc" readonly tabindex="-1"></td><td><input type="text" id="vol_late_total" readonly tabindex="-1"></td></tr>
+              <tr><td><b>Total</b></td><td><input type="text" id="vol_sum_cash" readonly tabindex="-1"></td><td><input type="text" id="vol_sum_itc" readonly tabindex="-1"></td><td><input type="text" id="vol_sum_total" readonly tabindex="-1"></td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
-      <div>
-        <label>Total Recoveries</label>
-        <table class="locked-table">
-          <thead>
-            <tr><th>Description</th><th>Cash</th><th>ITC</th><th>Total</th></tr>
-          </thead>
-          <tbody id="vol_tbl">
-            <tr><td>GST</td><td><input type="text" id="vol_gst_cash" inputmode="decimal" pattern="([Nn][Qq])|[0-9.,]*" title="Auto-filled" readonly tabindex="-1"></td><td><input type="text" id="vol_gst_itc" inputmode="decimal" pattern="([Nn][Qq])|[0-9.,]*" title="Auto-filled" readonly tabindex="-1"></td><td><input type="text" id="vol_gst_total" readonly tabindex="-1"></td></tr>
-            <tr><td>Interest</td><td><input type="text" id="vol_int_cash" inputmode="decimal" pattern="([Nn][Qq])|[0-9.,]*" title="Auto-filled" readonly tabindex="-1"></td><td><input type="text" id="vol_int_itc" readonly tabindex="-1"></td><td><input type="text" id="vol_int_total" readonly tabindex="-1"></td></tr>
-            <tr><td>Penalty</td><td><input type="text" id="vol_pen_cash" inputmode="decimal" pattern="([Nn][Qq])|[0-9.,]*" title="Auto-filled" readonly tabindex="-1"></td><td><input type="text" id="vol_pen_itc" readonly tabindex="-1"></td><td><input type="text" id="vol_pen_total" readonly tabindex="-1"></td></tr>
-            <tr><td>Late Fee</td><td><input type="text" id="vol_late_cash" inputmode="decimal" pattern="([Nn][Qq])|[0-9.,]*" title="Auto-filled" readonly tabindex="-1"></td><td><input type="text" id="vol_late_itc" readonly tabindex="-1"></td><td><input type="text" id="vol_late_total" readonly tabindex="-1"></td></tr>
-            <tr><td><b>Total</b></td><td><input type="text" id="vol_sum_cash" readonly tabindex="-1"></td><td><input type="text" id="vol_sum_itc" readonly tabindex="-1"></td><td><input type="text" id="vol_sum_total" readonly tabindex="-1"></td></tr>
-          </tbody>
-        </table>
-      </div>
+      <div class="muted" style="margin-top:8px">Totals auto-calculate if you enter Cash/ITC. You may override computed totals if needed.</div>
     </div>
-    <div class="muted" style="margin-top:8px">Totals auto-calculate if you enter Cash/ITC. You may override computed totals if needed.</div>
-  </div>
 
-  <div class="card" id="section-summary">
-    <div class="row" style="justify-content: space-between;">
-      <h3 style="margin:0">SUMMARY OF AUDIT RESULTS</h3>
-    </div>
-    <div class="muted" style="margin-bottom:8px">Columns: Sl.No., Gist of objection, Revenue implication (if any), Assessee/Taxable Person agreement (status + remarks), Auditors Comments, conclusion and Proposal</div>
-    <div class="row" style="justify-content: space-between; align-items:center; margin-bottom:8px; gap:12px;">
-      <div class="row" style="gap:14px; flex-wrap: wrap;">
-        <label class="toggle-group"><input type="checkbox" id="toggleMajor" checked /> Major Paras</label>
-        <label class="toggle-group"><input type="checkbox" id="toggleMinor" checked /> Minor Paras</label>
+    <div class="card" id="section-summary" data-section-group="summary">
+      <div class="row" style="justify-content: space-between;">
+        <h3 style="margin:0" data-section-focus="summary">SUMMARY OF AUDIT RESULTS</h3>
       </div>
-      <div class="muted" id="paraCounts" style="font-size:12px"></div>
+      <div class="muted" style="margin-bottom:8px">Columns: Sl.No., Gist of objection, Revenue implication (if any), Assessee/Taxable Person agreement (status + remarks), Auditors Comments, conclusion and Proposal</div>
+      <div class="row" style="justify-content: space-between; align-items:center; margin-bottom:8px; gap:12px;">
+        <div class="row" style="gap:14px; flex-wrap: wrap;">
+          <label class="toggle-group"><input type="checkbox" id="toggleMajor" checked /> Major Paras</label>
+          <label class="toggle-group"><input type="checkbox" id="toggleMinor" checked /> Minor Paras</label>
+        </div>
+        <div class="muted" id="paraCounts" style="font-size:12px"></div>
+      </div>
+      <div id="paras-container" class="paras-cards"></div>
+      <div class="row" style="justify-content:flex-end; margin-top:10px; gap:8px;">
+        <button class="secondary" id="addRow">Add Para</button>
+        <button class="secondary" id="addMinorRow">Add Minor Para</button>
+        <button class="danger" id="clearRows">Clear All</button>
+      </div>
     </div>
-    <div id="paras-container" class="paras-cards"></div>
-    <div class="row" style="justify-content:flex-end; margin-top:10px; gap:8px;">
-      <button class="secondary" id="addRow">Add Para</button>
-      <button class="secondary" id="addMinorRow">Add Minor Para</button>
-      <button class="danger" id="clearRows">Clear All</button>
-    </div>
-  </div>
 
-  <div class="card" id="section-risks">
-    <div class="row" style="justify-content: space-between;">
-      <h3 style="margin:0">Risk Flags (Template Table 3)</h3>
+    <div class="card" id="section-risks" data-section-group="risks">
+      <div class="row" style="justify-content: space-between;">
+        <h3 style="margin:0" data-section-focus="risks">Risk Flags (Template Table 3)</h3>
+      </div>
+      <div class="muted" style="margin-bottom:8px">Columns: Sl. No., Risk Parameter, Description, Verification, Action</div>
+      <table id="risks">
+        <thead>
+          <tr>
+            <th style="width:60px">Sl. No.</th>
+            <th>Risk Parameter</th>
+            <th>Description</th>
+            <th>Verification</th>
+            <th style="width:80px">Action</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <div class="row" style="justify-content:flex-end; margin-top:10px; gap:8px;">
+        <button class="secondary" id="addRisk">Add Row</button>
+        <button class="danger" id="clearRisk">Clear All</button>
+      </div>
     </div>
-    <div class="muted" style="margin-bottom:8px">Columns: Sl. No., Risk Parameter, Description, Verification, Action</div>
-    <table id="risks">
-      <thead>
-        <tr>
-          <th style="width:60px">Sl. No.</th>
-          <th>Risk Parameter</th>
-          <th>Description</th>
-          <th>Verification</th>
-          <th style="width:80px">Action</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-    <div class="row" style="justify-content:flex-end; margin-top:10px; gap:8px;">
-      <button class="secondary" id="addRisk">Add Row</button>
-      <button class="danger" id="clearRisk">Clear All</button>
-    </div>
-  </div>
 
-  <div class="card">
-    <h3 style="margin:0 0 8px 0">DAR/FAR issuing authority</h3>
-    <div class="muted" style="margin-bottom:8px">This information prints at the bottom right of the report.</div>
-    <table>
-      <tbody>
-        <tr>
-          <th style="width:240px">Name</th>
-          <td><input id="f_iss_name" type="text" placeholder="e.g., A. B. Sharma" /></td>
-        </tr>
-        <tr>
-          <th>Designation</th>
-          <td>
-            <select id="f_iss_desig">
-              <option value="">Select</option>
-              <option value="Assistant Commissioner">Assistant Commissioner</option>
-              <option value="Deputy Commissioner">Deputy Commissioner</option>
-            </select>
-          </td>
-        </tr>
-        <tr>
-          <th>Circle</th>
-          <td>
-            <select id="f_iss_circle">
-              <option value="">Select</option>
-              <option value="I">I</option>
-              <option value="II">II</option>
-              <option value="III">III</option>
-              <option value="IV">IV</option>
-              <option value="V">V</option>
-              <option value="VI">VI</option>
-              <option value="VII">VII</option>
-              <option value="VIII">VIII</option>
-              <option value="IX">IX</option>
-            </select>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
+    <div class="card" id="section-authority" data-section-group="part1">
+      <h3 style="margin:0 0 8px 0">DAR/FAR issuing authority</h3>
+      <div class="muted" style="margin-bottom:8px">This information prints at the bottom right of the report.</div>
+      <table>
+        <tbody>
+          <tr>
+            <th style="width:240px">Name</th>
+            <td><input id="f_iss_name" type="text" placeholder="e.g., A. B. Sharma" /></td>
+          </tr>
+          <tr>
+            <th>Designation</th>
+            <td>
+              <select id="f_iss_desig">
+                <option value="">Select</option>
+                <option value="Assistant Commissioner">Assistant Commissioner</option>
+                <option value="Deputy Commissioner">Deputy Commissioner</option>
+              </select>
+            </td>
+          </tr>
+          <tr>
+            <th>Circle</th>
+            <td>
+              <select id="f_iss_circle">
+                <option value="">Select</option>
+                <option value="I">I</option>
+                <option value="II">II</option>
+                <option value="III">III</option>
+                <option value="IV">IV</option>
+                <option value="V">V</option>
+                <option value="VI">VI</option>
+                <option value="VII">VII</option>
+                <option value="VIII">VIII</option>
+                <option value="IX">IX</option>
+              </select>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
 
-  <div id="dashboard-ribbon" class="dashboard-ribbon" style="display:none">
-    <div class="dashboard-title">Audit Summary Dashboard</div>
-    <div class="dashboard-grid">
-      <div class="dashboard-item">
-        <div class="label">Total Paras</div>
-        <div class="value" id="dash-total-paras">0</div>
+    <div id="dashboard-ribbon" class="dashboard-ribbon" style="display:none" data-section-group="dashboard">
+      <div class="dashboard-title" data-section-focus="dashboard">Audit Summary Dashboard</div>
+      <div class="dashboard-grid">
+        <div class="dashboard-item">
+          <div class="label">Total Paras</div>
+          <div class="value" id="dash-total-paras">0</div>
+        </div>
+        <div class="dashboard-item">
+          <div class="label">CGST Detection</div>
+          <div class="value" id="dash-cgst-det">₹0</div>
+        </div>
+        <div class="dashboard-item">
+          <div class="label">SGST Detection</div>
+          <div class="value" id="dash-sgst-det">₹0</div>
+        </div>
+        <div class="dashboard-item">
+          <div class="label">IGST Detection</div>
+          <div class="value" id="dash-igst-det">₹0</div>
+        </div>
+        <div class="dashboard-item">
+          <div class="label">CGST Recovery</div>
+          <div class="value" id="dash-cgst-rec">₹0</div>
+        </div>
+        <div class="dashboard-item">
+          <div class="label">SGST Recovery</div>
+          <div class="value" id="dash-sgst-rec">₹0</div>
+        </div>
+        <div class="dashboard-item">
+          <div class="label">IGST Recovery</div>
+          <div class="value" id="dash-igst-rec">₹0</div>
+        </div>
       </div>
-      <div class="dashboard-item">
-        <div class="label">CGST Detection</div>
-        <div class="value" id="dash-cgst-det">₹0</div>
-      </div>
-      <div class="dashboard-item">
-        <div class="label">SGST Detection</div>
-        <div class="value" id="dash-sgst-det">₹0</div>
-      </div>
-      <div class="dashboard-item">
-        <div class="label">IGST Detection</div>
-        <div class="value" id="dash-igst-det">₹0</div>
-      </div>
-      <div class="dashboard-item">
-        <div class="label">CGST Recovery</div>
-        <div class="value" id="dash-cgst-rec">₹0</div>
-      </div>
-      <div class="dashboard-item">
-        <div class="label">SGST Recovery</div>
-        <div class="value" id="dash-sgst-rec">₹0</div>
-      </div>
-      <div class="dashboard-item">
-        <div class="label">IGST Recovery</div>
-        <div class="value" id="dash-igst-rec">₹0</div>
-      </div>
+      <div class="dashboard-flags" id="dashboard-flags"></div>
     </div>
-    <div class="dashboard-flags" id="dashboard-flags"></div>
-  </div>
 
-  <div class="card">
-    <div class="row" style="gap:8px; flex-wrap:wrap; align-items:center">
-      <button id="generate">Generate DAR</button>
-      <button id="downloadLast" class="secondary" type="button" disabled>Download Last Output</button>
-      <span id="status" class="muted"></span>
+    <div class="card" id="section-output" data-section-group="session">
+      <div class="row" style="gap:8px; flex-wrap:wrap; align-items:center">
+        <button id="generate" data-section-focus="session">Generate DAR</button>
+        <button id="downloadLast" class="secondary" type="button" disabled>Download Last Output</button>
+        <span id="status" class="muted"></span>
+      </div>
+      <div id="log" class="log" style="margin-top:12px"></div>
     </div>
-    <div id="log" class="log" style="margin-top:12px"></div>
-  </div>
-  
-  <div class="card" id="section-session">
-    <div class="row" style="gap:8px; align-items:center">
-      <button id="saveSession" class="secondary" type="button">Save Session</button>
-      <button id="loadSessionBtn" class="secondary" type="button">Load Session</button>
-      <input id="loadSessionFile" type="file" accept="application/json,.json" style="display:none" />
-      <span class="muted">Save your progress to a JSON file or restore it later.</span>
+
+    <div class="card" id="section-session" data-section-group="session">
+      <div class="row" style="gap:8px; align-items:center">
+        <button id="saveSession" class="secondary" type="button">Save Session</button>
+        <button id="loadSessionBtn" class="secondary" type="button">Load Session</button>
+        <input id="loadSessionFile" type="file" accept="application/json,.json" style="display:none" />
+        <span class="muted">Save your progress to a JSON file or restore it later.</span>
+      </div>
+      <div class="row" style="gap:8px; align-items:center; margin-top:10px; flex-wrap:wrap;">
+        <button id="restoreAutosave" class="secondary" type="button">Restore Last Autosave</button>
+        <button id="toggleAutosaveHistory" class="secondary" type="button">Show Autosave History</button>
+        <span id="autosaveInfo" class="muted"></span>
+      </div>
+      <div id="autosaveHistoryPanel" class="autosave-history" style="display:none"></div>
     </div>
-    <div class="row" style="gap:8px; align-items:center; margin-top:10px; flex-wrap:wrap;">
-      <button id="restoreAutosave" class="secondary" type="button">Restore Last Autosave</button>
-      <button id="toggleAutosaveHistory" class="secondary" type="button">Show Autosave History</button>
-      <span id="autosaveInfo" class="muted"></span>
-    </div>
-    <div id="autosaveHistoryPanel" class="autosave-history" style="display:none"></div>
+    </main>
   </div>
 
   <div id="progressOverlay" class="progress-overlay" style="display:none">
@@ -606,6 +618,79 @@
     const $ = id => document.getElementById(id);
     const log = (...a) => { const s=a.join(' '); console.log(s); $('log').textContent += s+'\n'; };
     const setStatus = s => $('status').textContent = s;
+
+    function setupSectionNavigation(){
+      const navButtons = Array.from(document.querySelectorAll('.sticky-nav .nav-link[data-section-target]'));
+      if(!navButtons.length) return;
+      const groups = new Map();
+      document.querySelectorAll('[data-section-group]').forEach(el => {
+        const key = el.dataset.sectionGroup;
+        if(!key) return;
+        if(!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(el);
+      });
+      const isNaturallyFocusable = el => {
+        if(!el) return false;
+        return el.matches('a[href], button, input, textarea, select, summary, [tabindex]:not([tabindex="-1"])');
+      };
+      const focusSection = target => {
+        const focusEl = document.querySelector(`[data-section-focus="${target}"]`);
+        if(!focusEl) return;
+        const shouldAddTabindex = !isNaturallyFocusable(focusEl);
+        if(shouldAddTabindex){ focusEl.setAttribute('tabindex','-1'); }
+        try { focusEl.focus({ preventScroll: true }); } catch (_) {}
+        focusEl.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
+        if(shouldAddTabindex){
+          focusEl.addEventListener('blur', () => focusEl.removeAttribute('tabindex'), { once: true });
+        }
+      };
+      let currentTarget = null;
+      const showTarget = (target, { focus } = { focus: true }) => {
+        if(!target || !groups.has(target)) return;
+        if(currentTarget === target){
+          if(focus) focusSection(target);
+          return;
+        }
+        groups.forEach((elements, key) => {
+          const active = key === target;
+          elements.forEach(el => {
+            if(active){
+              el.classList.remove('section-hidden');
+              el.removeAttribute('hidden');
+              if(key === 'dashboard' && el.style && el.style.display === 'none'){
+                el.style.display = 'block';
+              }
+            }else{
+              el.classList.add('section-hidden');
+              el.setAttribute('hidden','');
+            }
+          });
+        });
+        navButtons.forEach(btn => {
+          const active = btn.dataset.sectionTarget === target;
+          btn.setAttribute('aria-current', active ? 'true' : 'false');
+          btn.setAttribute('aria-expanded', active ? 'true' : 'false');
+        });
+        currentTarget = target;
+        if(document.body){ document.body.dataset.activeSection = target; }
+        if(focus) focusSection(target);
+      };
+      navButtons.forEach(btn => {
+        btn.addEventListener('click', event => {
+          event.preventDefault();
+          showTarget(btn.dataset.sectionTarget, { focus: true });
+        });
+        btn.addEventListener('keydown', event => {
+          if(event.key === 'Enter' || event.key === ' '){
+            event.preventDefault();
+            showTarget(btn.dataset.sectionTarget, { focus: true });
+          }
+        });
+      });
+      showTarget(navButtons[0].dataset.sectionTarget, { focus: false });
+    }
+
+    setupSectionNavigation();
 
     const REQUIRED_FIELDS = [
       { id: 'f_name', label: 'Name of Unit' },
@@ -668,19 +753,6 @@
       applyGroupVisibility();
       updatePart1TotalsFromParas();
     }catch(e){}
-
-    document.querySelectorAll('.sticky-nav .nav-link').forEach(link => {
-      link.addEventListener('click', evt => {
-        const targetId = link.getAttribute('href');
-        if(targetId && targetId.startsWith('#')){
-          const targetEl = document.querySelector(targetId);
-          if(targetEl){
-            evt.preventDefault();
-            targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          }
-        }
-      });
-    });
 
     // Date helpers (dd-mm-yyyy)
     const auditDates = [];
@@ -3318,7 +3390,9 @@
       applyFieldHighlights(agg.missing);
       const dashboard = $('dashboard-ribbon');
       if(dashboard){
-        dashboard.style.display = (agg.totalParas > 0 || agg.flags.length) ? 'block' : 'none';
+        const activeSection = document.body && document.body.dataset ? document.body.dataset.activeSection : '';
+        const shouldShow = (agg.totalParas > 0 || agg.flags.length) || activeSection === 'dashboard';
+        dashboard.style.display = shouldShow ? 'block' : 'none';
       }
     }
 

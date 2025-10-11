@@ -71,12 +71,6 @@
     .toggle-group { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #374151; }
     .toggle-group input { accent-color: #2f80ed; }
     .toggle-group.disabled { opacity: 0.5; }
-    .autosave-history { border: 1px dashed #d1d5db; background: #f8fafc; border-radius: 8px; padding: 10px; margin-top: 10px; }
-    .autosave-history .autosave-item { display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 6px 0; border-bottom: 1px solid #e5e7eb; }
-    .autosave-history .autosave-item:last-child { border-bottom: 0; }
-    .autosave-history time { font-weight: 600; color: #1f2937; }
-    .autosave-history small { color: #6b7280; display: block; }
-    .autosave-history button { padding: 4px 8px; font-size: 12px; }
     .progress-overlay { position: fixed; inset: 0; background: rgba(255,255,255,0.75); backdrop-filter: blur(1.5px); display: flex; align-items: center; justify-content: center; z-index: 999; }
     .progress-overlay .overlay-content { background: #ffffff; border-radius: 12px; padding: 24px 32px; box-shadow: 0 20px 40px rgba(15, 23, 42, 0.18); display: flex; flex-direction: column; align-items: center; gap: 12px; }
     .progress-overlay .spinner { width: 36px; height: 36px; border-radius: 50%; border: 4px solid #dbeafe; border-top-color: #2563eb; animation: spin 0.8s linear infinite; }
@@ -591,7 +585,6 @@
     <div class="card" id="section-output" data-section-group="session">
       <div class="row" style="gap:8px; flex-wrap:wrap; align-items:center">
         <button id="generate" data-section-focus="session">Generate DAR</button>
-        <button id="downloadLast" class="secondary" type="button" disabled>Download Last Output</button>
         <span id="status" class="muted"></span>
       </div>
       <div id="log" class="log" style="margin-top:12px"></div>
@@ -605,11 +598,8 @@
         <span class="muted">Save your progress to a JSON file or restore it later.</span>
       </div>
       <div class="row" style="gap:8px; align-items:center; margin-top:10px; flex-wrap:wrap;">
-        <button id="restoreAutosave" class="secondary" type="button">Restore Last Autosave</button>
-        <button id="toggleAutosaveHistory" class="secondary" type="button">Show Autosave History</button>
         <span id="autosaveInfo" class="muted"></span>
       </div>
-      <div id="autosaveHistoryPanel" class="autosave-history" style="display:none"></div>
     </div>
     </main>
   </div>
@@ -748,9 +738,6 @@
     COMPLETION_FIELDS.forEach(registerCompletionField);
 
     const genBtn = $('generate');
-    const downloadLastBtn = $('downloadLast');
-    // Preloaded template; download link stays disabled until a file is generated
-    if(downloadLastBtn) downloadLastBtn.disabled = true;
     // Attach numeric/NQ restrictions and auto-calc listeners immediately
     try{
       wireNestedAutoCalc();
@@ -1208,7 +1195,7 @@
     let autosaves = [];
     let autosaveTimer = null;
     let lastAutosaveSnapshot = '';
-    let autosaveHistoryVisible = false;
+    let autosaveDisabled = false;
     let lastGeneratedBlob = null;
     let lastGeneratedName = 'Target-Filled.docx';
     let partTotalsTimer = null;
@@ -1313,15 +1300,6 @@
       if((opts && opts.focus) || type === 'error'){
         setTimeout(()=>{ try{ toast.focus({ preventScroll: true }); }catch(_){} }, 60);
       }
-    }
-    function downloadLastOutput(){
-      if(!lastGeneratedBlob){
-        showToast('error', 'No generated file available yet.');
-        return;
-      }
-      saveAs(lastGeneratedBlob, lastGeneratedName || 'Target-Filled.docx');
-      setStatus('Re-downloading last output…');
-      showToast('success', 'Downloading last output…', { duration: 3000 });
     }
     function formatIndianNumberString(str, decimalsHint){
       if(str==null) return '';
@@ -3206,90 +3184,26 @@
     }
     function renderAutosaveInfo(){
       const info = $('autosaveInfo');
-      const restoreBtn = $('restoreAutosave');
-      if(info){
-        let text;
-        if(autosaves.length){
-          const ts = autosaves[0].ts;
-          text = `Last autosave: ${formatTimestamp(ts)} (${formatRelative(ts)})`;
-        }else{
-          text = 'No autosaves yet';
-        }
-        if(preflightSnapshot.cardCount > 0){
-          if(preflightSnapshot.revenueMissing > 0){
-            text += ` • ${preflightSnapshot.revenueMissing} para${preflightSnapshot.revenueMissing === 1 ? '' : 's'} missing revenue totals.`;
-          }else{
-            text += ' • Revenue figures captured for all paras.';
-          }
-        }
-        info.textContent = text;
-      }
-      if(restoreBtn){ restoreBtn.disabled = autosaves.length === 0; }
-    }
-    function clearAutosaveHistory(){
-      autosaves = [];
-      lastAutosaveSnapshot = '';
-      saveAutosaves();
-      renderAutosaveInfo();
-      renderAutosaveHistory();
-    }
-    function renderAutosaveHistory(){
-      const panel = $('autosaveHistoryPanel');
-      const toggleBtn = $('toggleAutosaveHistory');
-      if(toggleBtn){
-        toggleBtn.textContent = autosaveHistoryVisible ? 'Hide Autosave History' : 'Show Autosave History';
-        toggleBtn.disabled = false;
-      }
-      if(!panel) return;
-      panel.style.display = autosaveHistoryVisible ? 'block' : 'none';
-      if(!autosaveHistoryVisible) return;
-      panel.replaceChildren();
-      const head = document.createElement('div');
-      head.className = 'autosave-history-head';
-      head.style.display = 'flex';
-      head.style.justifyContent = 'flex-end';
-      head.style.marginBottom = '8px';
-      if(autosaves.length){
-        const clearBtn = document.createElement('button');
-        clearBtn.type = 'button';
-        clearBtn.className = 'secondary';
-        clearBtn.dataset.clear = '1';
-        clearBtn.textContent = 'Clear History';
-        head.appendChild(clearBtn);
-      }else{
-        const note = document.createElement('span');
-        note.className = 'muted';
-        note.textContent = 'No autosaves yet';
-        head.appendChild(note);
-        panel.appendChild(head);
+      if(!info) return;
+      let text;
+      if(autosaveDisabled){
+        info.textContent = 'Autosave unavailable (browser storage not accessible).';
         return;
       }
-      panel.appendChild(head);
-      autosaves.forEach((entry, idx)=>{
-        const item = document.createElement('div');
-        item.className = 'autosave-item';
-        const meta = document.createElement('div');
-        const timeEl = document.createElement('time');
-        timeEl.textContent = formatTimestamp(entry.ts);
-        const sub = document.createElement('small');
-        sub.textContent = `Saved ${formatRelative(entry.ts)}`;
-        meta.appendChild(timeEl);
-        meta.appendChild(sub);
-        const actions = document.createElement('div');
-        const restoreBtn = document.createElement('button');
-        restoreBtn.type = 'button';
-        restoreBtn.className = 'secondary';
-        restoreBtn.dataset.restore = String(idx);
-        restoreBtn.textContent = 'Restore';
-        actions.appendChild(restoreBtn);
-        item.appendChild(meta);
-        item.appendChild(actions);
-        panel.appendChild(item);
-      });
-    }
-    function syncAutosaveSnapshot(){
-      try{ lastAutosaveSnapshot = JSON.stringify(collectSession()); }
-      catch(e){ lastAutosaveSnapshot = ''; }
+      if(autosaves.length){
+        const ts = autosaves[0].ts;
+        text = `Autosaved ${formatRelative(ts)} (${formatTimestamp(ts)})`;
+      }else{
+        text = 'Autosave has not run yet.';
+      }
+      if(preflightSnapshot.cardCount > 0){
+        if(preflightSnapshot.revenueMissing > 0){
+          text += ` • ${preflightSnapshot.revenueMissing} para${preflightSnapshot.revenueMissing === 1 ? '' : 's'} missing revenue totals.`;
+        }else{
+          text += ' • Revenue figures captured for all paras.';
+        }
+      }
+      info.textContent = text;
     }
     function doAutosave(reason='interval'){
       try{
@@ -3301,65 +3215,78 @@
         if(autosaves.length > AUTOSAVE_LIMIT) autosaves = autosaves.slice(0, AUTOSAVE_LIMIT);
         saveAutosaves();
         renderAutosaveInfo();
-        if(autosaveHistoryVisible) renderAutosaveHistory();
       }catch(e){ console.warn('Autosave failed:', e); }
     }
     function startAutosaveTimer(){
       if(autosaveTimer) clearInterval(autosaveTimer);
       autosaveTimer = setInterval(()=>doAutosave('interval'), 30000);
     }
-    function restoreAutosaveAt(index){
-      if(!autosaves.length){ alert('No autosaves to restore.'); return; }
-      const entry = autosaves[index];
-      if(!entry){ alert('Autosave not found.'); return; }
-      restoreSession(entry.data);
-      syncAutosaveSnapshot();
-      renderAutosaveInfo();
-      if(autosaveHistoryVisible) renderAutosaveHistory();
-      setStatus(`Restored autosave from ${formatTimestamp(entry.ts)}.`);
+    function hasUserEnteredData(){
+      const fields = document.querySelectorAll('input, textarea, select');
+      for(const field of fields){
+        if(!field) continue;
+        const type = (field.type || '').toLowerCase();
+        if(type === 'file' || type === 'button' || type === 'submit' || type === 'reset') continue;
+        if(field.id === 'loadSessionFile') continue;
+        if(field.readOnly || field.disabled) continue;
+        if(type === 'checkbox' || type === 'radio'){
+          if(field.checked) return true;
+          continue;
+        }
+        if(String(field.value || '').trim()){ return true; }
+      }
+      const editors = document.querySelectorAll('.gist-editor');
+      for(const editor of editors){
+        const text = (editor.textContent || editor.innerText || '').trim();
+        if(text) return true;
+      }
+      return false;
     }
     function initAutosave(){
       if(typeof localStorage === 'undefined'){
-        const info = $('autosaveInfo');
-        if(info) info.textContent = 'Autosave unavailable (browser storage not accessible).';
-        const restoreBtn = $('restoreAutosave'); if(restoreBtn) restoreBtn.disabled = true;
-        const toggleBtn = $('toggleAutosaveHistory'); if(toggleBtn) toggleBtn.disabled = true;
+        autosaveDisabled = true;
+        renderAutosaveInfo();
         return;
       }
       autosaves = loadAutosaves();
+      let restored = false;
       if(autosaves.length){
         try{ lastAutosaveSnapshot = JSON.stringify(autosaves[0].data||{}); }
         catch(e){ lastAutosaveSnapshot = ''; }
+        if(!hasUserEnteredData()){
+          const latest = autosaves[0];
+          try{
+            restoreSession(latest.data);
+            restored = true;
+            setStatus(`Restored autosave from ${formatTimestamp(latest.ts)}.`);
+          }catch(err){
+            console.warn('Failed to restore autosave:', err);
+          }
+        }
       }
       renderAutosaveInfo();
-      renderAutosaveHistory();
       startAutosaveTimer();
-      const restoreBtn = $('restoreAutosave');
-      if(restoreBtn){ restoreBtn.addEventListener('click', ()=> restoreAutosaveAt(0)); }
-      const toggleBtn = $('toggleAutosaveHistory');
-      if(toggleBtn){ toggleBtn.addEventListener('click', ()=>{ autosaveHistoryVisible = !autosaveHistoryVisible; renderAutosaveHistory(); }); }
-      const panel = $('autosaveHistoryPanel');
-      if(panel){
-        panel.addEventListener('click', (e)=>{
-          const restoreBtn = e.target.closest('[data-restore]');
-          if(restoreBtn){
-            const idx = parseInt(restoreBtn.dataset.restore, 10);
-            if(!Number.isNaN(idx)) restoreAutosaveAt(idx);
-            return;
-          }
-          const clearBtn = e.target.closest('[data-clear]');
-          if(clearBtn){ clearAutosaveHistory(); }
-        });
-      }
       window.addEventListener('beforeunload', ()=>{ try{ doAutosave('beforeunload'); }catch(_){} });
       window.addEventListener('storage', (e)=>{
         if(e.key === AUTOSAVE_KEY){
           autosaves = loadAutosaves();
           renderAutosaveInfo();
-          if(autosaveHistoryVisible) renderAutosaveHistory();
         }
       });
       setTimeout(()=>{ try{ doAutosave('initial'); }catch(_){} }, 4000);
+      if(restored){
+        showToast('success', 'Restored your latest autosave.', {
+          duration: 7000,
+          actionLabel: 'Discard autosave',
+          onAction: ()=>{
+            autosaves = [];
+            lastAutosaveSnapshot = '';
+            saveAutosaves();
+            renderAutosaveInfo();
+            setStatus('Autosave cleared.');
+          }
+        });
+      }
     }
     function restoreSession(data){
       try{
@@ -4144,10 +4071,17 @@
         const outName = 'Target-Filled.docx';
         lastGeneratedBlob = out;
         lastGeneratedName = outName;
-        if(downloadLastBtn) downloadLastBtn.disabled = false;
         saveAs(out, outName);
         setStatus('Done. Download started.');
-        showToast('success', 'DAR generated successfully.', { actionLabel: 'Download again', onAction: downloadLastOutput, duration: 6000 });
+        const triggerDownload = ()=>{
+          if(!lastGeneratedBlob){
+            showToast('error', 'No generated file available yet.');
+            return;
+          }
+          saveAs(lastGeneratedBlob, lastGeneratedName || 'Target-Filled.docx');
+          setStatus('Download started.');
+        };
+        showToast('success', 'DAR generated successfully.', { actionLabel: 'Download again', onAction: triggerDownload, duration: 6000 });
       }catch(err){
         console.error(err);
         log('ERROR:', String(err?.message||err));
@@ -4192,10 +4126,6 @@
         rdr.readAsText(f);
       };
     }
-    if(downloadLastBtn){
-      downloadLastBtn.addEventListener('click', downloadLastOutput);
-    }
-
     // Manual save/load session
     if($('saveSession')) $('saveSession').addEventListener('click', () => {
       try{

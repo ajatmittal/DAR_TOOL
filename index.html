@@ -173,13 +173,21 @@
     /* Dashboard ribbon */
     .dashboard-ribbon { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
     .dashboard-title { font-weight: 600; color: #1f2937; margin-bottom: 12px; }
-    .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
-    .dashboard-item { background: #fff; border: 1px solid #d1d5db; border-radius: 6px; padding: 12px; }
-    .dashboard-item .label { font-size: 12px; color: #6b7280; margin-bottom: 4px; }
-    .dashboard-item .value { font-weight: 600; color: #1f2937; }
+    .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+    .dashboard-item { background: #fff; border: 1px solid #d1d5db; border-radius: 10px; padding: 16px; box-shadow: 0 1px 2px rgba(15,23,42,0.06); }
+    .dashboard-item .label { font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; }
+    .dashboard-item .value { font-weight: 600; color: #1f2937; font-size: 24px; }
+    .dashboard-summary { margin-top: 16px; background: #fff; border: 1px solid #d1d5db; border-radius: 10px; box-shadow: 0 1px 2px rgba(15,23,42,0.04); padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+    .dashboard-summary-title { font-weight: 600; color: #1f2937; font-size: 14px; }
+    .dashboard-summary .table-scroll { max-height: 260px; }
+    .dashboard-summary table th:nth-child(1) { width: 70px; }
+    .dashboard-summary table th:nth-child(2) { width: 80px; }
+    .dashboard-summary table th:nth-child(3), .dashboard-summary table th:nth-child(4) { width: 140px; }
+    .dashboard-summary-empty { padding: 12px; text-align: center; color: #6b7280; font-size: 14px; }
     .dashboard-flags { margin-top: 12px; }
     .dashboard-flags .flag { background: #fef2f2; color: #b91c1c; padding: 8px; border-radius: 6px; margin-bottom: 8px; font-size: 14px; }
     .dashboard-flags .flag:last-child { margin-bottom: 0; }
+    .visually-hidden { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
     .section-hidden { display: none !important; }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
@@ -547,32 +555,34 @@
       <div class="dashboard-title" data-section-focus="dashboard">Audit Summary Dashboard</div>
       <div class="dashboard-grid">
         <div class="dashboard-item">
-          <div class="label">Total Paras</div>
+          <div class="label">Total Paras Raised</div>
           <div class="value" id="dash-total-paras">0</div>
         </div>
         <div class="dashboard-item">
-          <div class="label">CGST Detection</div>
-          <div class="value" id="dash-cgst-det">₹0</div>
+          <div class="label">Total Detection</div>
+          <div class="value" id="dash-total-detection">₹0</div>
         </div>
         <div class="dashboard-item">
-          <div class="label">SGST Detection</div>
-          <div class="value" id="dash-sgst-det">₹0</div>
+          <div class="label">Total Recovery</div>
+          <div class="value" id="dash-total-recovery">₹0</div>
         </div>
-        <div class="dashboard-item">
-          <div class="label">IGST Detection</div>
-          <div class="value" id="dash-igst-det">₹0</div>
-        </div>
-        <div class="dashboard-item">
-          <div class="label">CGST Recovery</div>
-          <div class="value" id="dash-cgst-rec">₹0</div>
-        </div>
-        <div class="dashboard-item">
-          <div class="label">SGST Recovery</div>
-          <div class="value" id="dash-sgst-rec">₹0</div>
-        </div>
-        <div class="dashboard-item">
-          <div class="label">IGST Recovery</div>
-          <div class="value" id="dash-igst-rec">₹0</div>
+      </div>
+      <div class="dashboard-summary" aria-live="polite">
+        <div class="dashboard-summary-title">Para-wise detection &amp; recovery</div>
+        <div class="table-scroll">
+          <table aria-describedby="dashboard-summary-caption">
+            <caption id="dashboard-summary-caption" class="visually-hidden">Detection and recovery totals grouped by para</caption>
+            <thead>
+              <tr>
+                <th scope="col">Para</th>
+                <th scope="col">Type</th>
+                <th scope="col">Detection (₹)</th>
+                <th scope="col">Recovery (₹)</th>
+                <th scope="col">Gist summary</th>
+              </tr>
+            </thead>
+            <tbody id="dash-para-rows"></tbody>
+          </table>
         </div>
       </div>
       <div class="dashboard-flags" id="dashboard-flags"></div>
@@ -2238,15 +2248,15 @@
       return val.toLocaleString('en-IN', opts);
     }
 
-    function updateParaSummary(card){
-      if(!card) return;
-      const summaryEl = card._summaryEl || card.querySelector('.summary-pill');
-      if(!summaryEl) return;
-      let detectionTotal = 0;
-      let recoveryCash = 0;
-      let recoveryItc = 0;
-      let detectionHas = false;
-      let recoveryHas = false;
+    function computeParaFinancials(card){
+      const figures = {
+        detectionTotal: 0,
+        detectionHas: false,
+        recoveryCash: 0,
+        recoveryItc: 0,
+        recoveryHas: false
+      };
+      if(!card) return figures;
       if(card.dataset.revMode === 'major'){
         const data = readMajorRevenue(card) || majorRevenueDefaults();
         ['tax','interest','penalty','late'].forEach(cat => {
@@ -2254,7 +2264,10 @@
           if(!node) return;
           ['cgst','sgst','igst'].forEach(tax => {
             const val = parseAmount(node[tax]);
-            if(val !== null){ detectionTotal += val; detectionHas = true; }
+            if(val !== null){
+              figures.detectionTotal += val;
+              figures.detectionHas = true;
+            }
           });
         });
         const taxRec = data.recovery.tax || {};
@@ -2262,33 +2275,57 @@
           const bucket = taxRec[tax];
           if(!bucket) return;
           const itcVal = parseAmount(bucket.itc);
-          if(itcVal !== null){ recoveryItc += itcVal; recoveryHas = true; }
+          if(itcVal !== null){
+            figures.recoveryItc += itcVal;
+            figures.recoveryHas = true;
+          }
           const cashVal = parseAmount(bucket.cash);
-          if(cashVal !== null){ recoveryCash += cashVal; recoveryHas = true; }
+          if(cashVal !== null){
+            figures.recoveryCash += cashVal;
+            figures.recoveryHas = true;
+          }
         });
         ['interest','penalty','late'].forEach(cat => {
           const node = data.recovery[cat];
           if(!node) return;
           ['cgst','sgst','igst'].forEach(tax => {
             const val = parseAmount(node[tax]);
-            if(val !== null){ recoveryCash += val; recoveryHas = true; }
+            if(val !== null){
+              figures.recoveryCash += val;
+              figures.recoveryHas = true;
+            }
           });
         });
       }else{
         const revContainer = card.querySelector('[data-role="minor-rev"]');
         if(revContainer){
-          const taxVal = parseAmount(revContainer.querySelector('.rev-tax')?.value);
-          if(taxVal !== null){ detectionTotal += taxVal; detectionHas = true; }
-          const intVal = parseAmount(revContainer.querySelector('.rev-int')?.value);
-          if(intVal !== null){ detectionTotal += intVal; detectionHas = true; }
-          const penVal = parseAmount(revContainer.querySelector('.rev-pen')?.value);
-          if(penVal !== null){ detectionTotal += penVal; detectionHas = true; }
-          const lateVal = parseAmount(revContainer.querySelector('.rev-late')?.value);
-          if(lateVal !== null){ detectionTotal += lateVal; detectionHas = true; }
+          const detectionSelectors = ['.rev-tax', '.rev-int', '.rev-pen', '.rev-late'];
+          detectionSelectors.forEach(sel => {
+            const val = parseAmount(revContainer.querySelector(sel)?.value);
+            if(val !== null){
+              figures.detectionTotal += val;
+              figures.detectionHas = true;
+            }
+          });
           const paidVal = parseAmount(revContainer.querySelector('.rev-paid')?.value);
-          if(paidVal !== null){ recoveryCash += paidVal; recoveryHas = true; }
+          if(paidVal !== null){
+            figures.recoveryCash += paidVal;
+            figures.recoveryHas = true;
+          }
         }
       }
+      return figures;
+    }
+    function updateParaSummary(card){
+      if(!card) return;
+      const summaryEl = card._summaryEl || card.querySelector('.summary-pill');
+      if(!summaryEl) return;
+      const figures = computeParaFinancials(card);
+      const detectionTotal = figures.detectionTotal;
+      const recoveryCash = figures.recoveryCash;
+      const recoveryItc = figures.recoveryItc;
+      const detectionHas = figures.detectionHas;
+      const recoveryHas = figures.recoveryHas;
       const gistDiv = card.querySelector('[data-role="gist"]');
       const gistText = gistDiv ? (gistDiv.textContent || gistDiv.innerText || '').trim() : '';
       const agreeDetails = readAgreementFromCard(card);
@@ -3448,39 +3485,36 @@
     function computeDashboardAggregates(){
       const aggregates = {
         totalParas: 0,
-        cgstDet: 0, sgstDet: 0, igstDet: 0,
-        cgstRec: 0, sgstRec: 0, igstRec: 0,
+        totalDetection: 0,
+        totalRecovery: 0,
         flags: [],
-        missing: []
+        missing: [],
+        perParas: []
       };
       for(const card of Array.from(parasContainer.children)){
         if(!(card.classList && card.classList.contains('para-card'))) continue;
         aggregates.totalParas++;
         const isMinor = card.dataset.minor === '1';
-        if(!isMinor){
-          const revDiv = card.querySelector('[data-role="major-rev"]');
-          const detInputs = revDiv?.querySelectorAll('input[data-role="det"]');
-          const recInputs = revDiv?.querySelectorAll('input[data-role="rec"]');
-          detInputs?.forEach(input => {
-            const tax = input.dataset.tax;
-            const val = num(input.value);
-            if(!Number.isFinite(val)) return;
-            if(tax === 'cgst') aggregates.cgstDet += val;
-            else if(tax === 'sgst') aggregates.sgstDet += val;
-            else if(tax === 'igst') aggregates.igstDet += val;
-          });
-          recInputs?.forEach(input => {
-            const tax = input.dataset.tax;
-            const val = num(input.value);
-            if(!Number.isFinite(val)) return;
-            if(tax === 'cgst') aggregates.cgstRec += val;
-            else if(tax === 'sgst') aggregates.sgstRec += val;
-            else if(tax === 'igst') aggregates.igstRec += val;
-          });
-        }
         const sl = card.querySelector('.para-sl-no')?.textContent || '';
         const gistNode = card.querySelector('[data-role="gist"]');
-        const gistText = gistNode ? (gistNode.textContent || gistNode.innerText || '').replace(/ /g,' ').trim() : '';
+        const gistHtml = gistNode ? getSanitizedHtml(gistNode) : '';
+        const gistPlain = gistNode ? (gistNode.textContent || gistNode.innerText || '') : '';
+        const gistText = (gistHtml || gistPlain).replace(/ /g,' ').trim();
+        const gistSummary = getGistSummary(gistHtml || gistText || '');
+        const figures = computeParaFinancials(card);
+        const recoveryTotal = figures.recoveryCash + figures.recoveryItc;
+        aggregates.totalDetection += figures.detectionTotal;
+        aggregates.totalRecovery += recoveryTotal;
+        const displayNo = sl || String(aggregates.perParas.length + 1);
+        aggregates.perParas.push({
+          sl: displayNo,
+          type: isMinor ? 'Minor' : 'Major',
+          gist: gistSummary,
+          detection: figures.detectionTotal,
+          detectionHas: figures.detectionHas,
+          recovery: recoveryTotal,
+          recoveryHas: figures.recoveryHas
+        });
         const agreeStatusNode = card.querySelector('[data-role="agree-status"]');
         const agreement = readAgreementFromCard(card);
         const auditNode = card.querySelector('textarea[data-role="audit"]');
@@ -3506,12 +3540,10 @@
     function updateDashboard(){
       const agg = computeDashboardAggregates();
       $('dash-total-paras').textContent = agg.totalParas;
-      $('dash-cgst-det').textContent = '₹' + formatIndianNumberString(agg.cgstDet);
-      $('dash-sgst-det').textContent = '₹' + formatIndianNumberString(agg.sgstDet);
-      $('dash-igst-det').textContent = '₹' + formatIndianNumberString(agg.igstDet);
-      $('dash-cgst-rec').textContent = '₹' + formatIndianNumberString(agg.cgstRec);
-      $('dash-sgst-rec').textContent = '₹' + formatIndianNumberString(agg.sgstRec);
-      $('dash-igst-rec').textContent = '₹' + formatIndianNumberString(agg.igstRec);
+      const detectionLabel = $('dash-total-detection');
+      if(detectionLabel){ detectionLabel.textContent = formatCurrencyValue(agg.totalDetection); }
+      const recoveryLabel = $('dash-total-recovery');
+      if(recoveryLabel){ recoveryLabel.textContent = formatCurrencyValue(agg.totalRecovery); }
       const flagsDiv = $('dashboard-flags');
       if(flagsDiv){
         flagsDiv.replaceChildren();
@@ -3522,6 +3554,39 @@
             div.textContent = flag;
             flagsDiv.appendChild(div);
           });
+        }
+      }
+      const tableBody = $('dash-para-rows');
+      if(tableBody){
+        tableBody.replaceChildren();
+        if(agg.perParas.length){
+          agg.perParas.forEach(para => {
+            const tr = document.createElement('tr');
+            const tdPara = document.createElement('td');
+            tdPara.textContent = para.sl;
+            tr.appendChild(tdPara);
+            const tdType = document.createElement('td');
+            tdType.textContent = para.type;
+            tr.appendChild(tdType);
+            const tdDet = document.createElement('td');
+            tdDet.textContent = para.detectionHas ? formatCurrencyValue(para.detection) : '—';
+            tr.appendChild(tdDet);
+            const tdRec = document.createElement('td');
+            tdRec.textContent = para.recoveryHas ? formatCurrencyValue(para.recovery) : '—';
+            tr.appendChild(tdRec);
+            const tdGist = document.createElement('td');
+            tdGist.textContent = para.gist || 'No gist entered';
+            tr.appendChild(tdGist);
+            tableBody.appendChild(tr);
+          });
+        }else{
+          const tr = document.createElement('tr');
+          const td = document.createElement('td');
+          td.colSpan = 5;
+          td.className = 'dashboard-summary-empty';
+          td.textContent = 'Add paras to view detection and recovery totals.';
+          tr.appendChild(td);
+          tableBody.appendChild(tr);
         }
       }
       applyFieldHighlights(agg.missing);
